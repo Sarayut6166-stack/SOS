@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>ระบบหน่วยกู้ภัย - SOS</title>
 
+  <!-- แผนที่ Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body { margin:0; font-family: system-ui, -apple-system, sans-serif; }
@@ -13,15 +14,12 @@
       background:#1e88e5;
       color:#fff;
     }
-    .topbar h1 {
-      margin: 0;
-      font-size: 18px;
-    }
+    .topbar h1 { margin:0; font-size:18px; }
     .topbar small { font-size:12px; }
 
     #map { height: 40vh; }
 
-    .container { padding: 8px 12px; max-width: 960px; margin:auto; }
+    .container { padding: 8px 12px; max-width:960px; margin:auto; }
 
     table { width:100%; border-collapse: collapse; font-size:13px; }
     th, td {
@@ -41,27 +39,20 @@
     .btn-done { background:#43a047; color:#fff; margin-right:4px; }
     .btn-del  { background:#e53935; color:#fff; }
 
-    #status { font-size:12px; margin-left:8px; }
-
-    .filters { margin-top:6px; font-size:13px; }
-    .filters select {
-      margin:2px 2px 4px 0;
-      padding:4px;
-      font-size:13px;
-    }
+    #status { font-size:12px; margin-top:4px; }
   </style>
 </head>
 <body>
   <div class="topbar">
     <h1>🚑 ระบบหน่วยกู้ภัย - SOS</h1>
-    <small>ดูตำแหน่งผู้ประสบภัยจากฐานข้อมูลแบบเรียลไทม์</small>
+    <small>ข้อมูลจากฐานข้อมูล Firestore (collection: cases)</small>
     <div id="status"></div>
   </div>
 
   <div id="map"></div>
 
   <div class="container">
-    <h3>รายการผู้ประสบภัย (ดึงจาก Firestore ทั้งหมด)</h3>
+    <h3>รายการผู้ประสบภัย (เฉพาะเคสที่ยังไม่ปิด)</h3>
     <table>
       <thead>
         <tr>
@@ -81,10 +72,10 @@
   <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Firebase config -->
+  <!-- Firebase config (มีตัวแปร firebaseConfig อยู่ในไฟล์นี้แล้ว) -->
   <script src="firebase-config.js"></script>
 
-  <!-- Firebase + Firestore (เวอร์ชันตัดให้เหลือง่ายที่สุด) -->
+  <!-- Firebase + Firestore -->
   <script type="module">
     import { initializeApp } 
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -97,11 +88,11 @@
       doc
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // ใช้ config จาก firebase-config.js
+    // ใช้ config เดียวกับ report.html
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
-    // ----- แผนที่ -----
+    // ----- ตั้งค่าแผนที่ -----
     const map = L.map('map').setView([7.0, 100.5], 11);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19
@@ -119,8 +110,8 @@
     const tbody   = document.getElementById('caseTableBody');
     const statusEl = document.getElementById('status');
 
+    // ฟังก์ชันแสดงผลเคส
     function renderSnapshot(snapshot) {
-      // เคลียร์ตาราง + มาร์กเกอร์เก่า
       tbody.innerHTML = '';
       for (const id in markers) {
         map.removeLayer(markers[id]);
@@ -128,13 +119,16 @@
       }
 
       if (snapshot.empty) {
-        statusEl.textContent = 'ไม่มีข้อมูลผู้ประสบภัยในฐานข้อมูล';
+        statusEl.textContent = 'ยังไม่มีข้อมูลผู้ประสบภัยใน Firestore';
         return;
       }
 
       snapshot.forEach(docSnap => {
         const c  = docSnap.data();
         const id = docSnap.id;
+
+        // แสดงเฉพาะเคสที่ยังเปิดอยู่
+        if (c.status && c.status !== 'open') return;
 
         const region = c.region || {};
         const name  = c.name  || '';
@@ -144,7 +138,7 @@
         const lng   = typeof c.lng === 'number' ? c.lng : null;
         const water = c.waterLevel || '-';
 
-        // แสดงในตาราง
+        // แถวในตาราง
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${name}</td>
@@ -163,7 +157,7 @@
         `;
         tbody.appendChild(tr);
 
-        // แสดงบนแผนที่
+        // มาร์กเกอร์บนแผนที่
         if (lat !== null && lng !== null) {
           const color = levelColor[water] || "#000";
           const marker = L.circleMarker([lat, lng], {
@@ -182,10 +176,10 @@
         }
       });
 
-      statusEl.textContent = 'เชื่อมต่อฐานข้อมูลเรียบร้อย (อัปเดตอัตโนมัติ)';
+      statusEl.textContent = 'เชื่อมต่อ Firestore แล้ว (อัปเดตอัตโนมัติ)';
     }
 
-    // ดึงข้อมูลแบบ real-time จาก collection 'cases' ทั้งหมด
+    // ดึงข้อมูลแบบ realtime จาก collection 'cases'
     onSnapshot(collection(db, 'cases'), (snapshot) => {
       renderSnapshot(snapshot);
     }, (error) => {
@@ -193,7 +187,7 @@
       statusEl.textContent = 'อ่านข้อมูลจาก Firestore ไม่สำเร็จ: ' + error.message;
     });
 
-    // จัดการปุ่ม "ช่วยแล้ว" และ "ลบ"
+    // ปุ่มช่วยแล้ว / ลบ
     tbody.addEventListener('click', async (e) => {
       const id = e.target.getAttribute('data-id');
       if (!id) return;
@@ -212,7 +206,7 @@
       }
     });
 
-    // แสดงตำแหน่งของหน่วยกู้ภัยเอง (อุปกรณ์ที่เปิดหน้านี้)
+    // แสดงตำแหน่งหน่วยกู้ภัยเอง
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(pos => {
         const lat = pos.coords.latitude;
