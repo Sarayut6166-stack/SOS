@@ -141,6 +141,7 @@
       cursor: pointer;
       text-decoration: none;
       white-space: nowrap;
+      margin-bottom: 2px;
     }
     .btn-map {
       background: #1565c0;
@@ -149,7 +150,7 @@
     .btn-finish {
       background: #2e7d32;
       color: #fff;
-      margin-top: 2px;
+      margin-top: 4px;
     }
 
     .status-tag {
@@ -400,10 +401,24 @@
       tbody.innerHTML = filtered.map((c, idx) => {
         const lat = c.lat;
         const lng = c.lng;
-        const hasLoc = typeof lat === 'number' && typeof lng === 'number';
-        const mapUrl = hasLoc
-          ? `https://www.google.com/maps?q=${lat},${lng}`
-          : '';
+        const hasLoc = typeof lat === "number" && typeof lng === "number";
+
+        let mapLinks = "-";
+        if (hasLoc) {
+          const gmapsUrl   = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+          const appleUrl   = `http://maps.apple.com/?ll=${lat},${lng}`;
+          const osmandUrl  = `https://osmand.net/map?pin=${lat},${lng}#17/${lat}/${lng}`;
+          const organicUrl = `https://omaps.app/map?v=1&ll=${lat},${lng}`;
+          const mapsmeUrl  = `mapsme://map?ll=${lat},${lng}&n=ตำแหน่งผู้ประสบภัย`;
+
+          mapLinks = `
+            <a class="btn-map" href="${gmapsUrl}" target="_blank">Google</a><br>
+            <a class="btn-map" href="${appleUrl}" target="_blank">Apple</a><br>
+            <a class="btn-map" href="${mapsmeUrl}">Maps.me</a><br>
+            <a class="btn-map" href="${osmandUrl}" target="_blank">OsmAnd</a><br>
+            <a class="btn-map" href="${organicUrl}" target="_blank">Organic</a>
+          `;
+        }
 
         return `
           <tr>
@@ -414,9 +429,7 @@
             <td>${levelBadge(c.waterLevel)}</td>
             <td>${c.note ? c.note.replace(/\n/g, '<br>') : '-'}</td>
             <td>
-              ${hasLoc
-                ? `<a class="btn-map" href="${mapUrl}" target="_blank">เปิดแผนที่</a><br>`
-                : ''}
+              ${mapLinks}<br>
               <button class="btn-finish" onclick="closeCase('${c.id}')">
                 ✔ ช่วยแล้ว
               </button>
@@ -437,7 +450,7 @@
           closedAt: serverTimestamp()
         });
         alert("บันทึกว่า 'ช่วยแล้ว' สำเร็จ");
-        // ไม่ต้อง reload ก็ได้ เดี๋ยว onSnapshot จะอัปเดตให้เอง
+        // onSnapshot จะอัปเดตตารางให้เอง
       } catch (err) {
         console.error(err);
         alert("เกิดข้อผิดพลาด ไม่สามารถปิดเคสได้");
