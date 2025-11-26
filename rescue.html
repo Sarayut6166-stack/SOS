@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ระบบหน่วยกู้ภัย - SOS</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { margin:0; font-family: system-ui, -apple-system, sans-serif; }
+    .topbar {
+      padding: 8px 12px;
+      background:#1e88e5;
+      color:#fff;
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .topbar small { font-size:12px; }
+
+    #map { height: 40vh; }
+
+    .container { padding: 8px 12px; max-width: 960px; margin:auto; }
+
+    table { width:100%; border-collapse: collapse; font-size:13px; }
+    th, td {
+      border:1px solid #ddd;
+      padding:4px;
+      vertical-align: top;
+    }
+    th { background:#f0f0f0; }
+
+    button {
+      padding:4px 8px;
+      font-size:12px;
+      border:none;
+      border-radius:6px;
+      cursor:pointer;
+    }
+    .btn-sync { background:#1565c0; color:#fff; }
+    .btn-done { background:#43a047; color:#fff; margin-right:4px; }
+    .btn-del  { background:#e53935; color:#fff; }
+
+    #status { font-size:12px; margin-left:8px; }
+
+    .filters { margin-top:6px; font-size:13px; }
+    .filters select {
+      margin:2px 2px 4px 0;
+      padding:4px;
+      font-size:13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>🚑 ระบบหน่วยกู้ภัย - SOS</h1>
+    <small>ดูตำแหน่งผู้ประสบภัย แยกตามพื้นที่ และจัดการเคส</small>
+    <div style="margin-top:4px;">
+      <button class="btn-sync" id="btnSync">ซิงค์ข้อมูลล่าสุด</button>
+      <span id="status"></span>
+    </div>
+
+    <div class="filters">
+      <div>
+        <strong>กรองพื้นที่:</strong>
+        <select id="filterDistrict">
+          <option value="">ทุกอำเภอ</option>
+          <option value="หาดใหญ่">หาดใหญ่</option>
+          <option value="เมืองสงขลา">เมืองสงขลา</option>
+          <option value="นาหม่อม">นาหม่อม</option>
+        </select>
+        <select id="filterSubdistrict">
+          <option value="">ทุกตำบล / เขต / เทศบาล</option>
+          <option value="บ้านพรุ">บ้านพรุ</option>
+          <option value="คลองแห">คลองแห</option>
+          <option value="พะวง">พะวง</option>
+        </select>
+        <select id="filterVillage">
+          <option value="">ทุกหมู่บ้าน / ชุมชน</option>
+          <option value="หมู่ 1">หมู่ 1</option>
+          <option value="หมู่ 2">หมู่ 2</option>
+          <option value="หมู่ 3">หมู่ 3</option>
+          <option value="หมู่ 4">หมู่ 4</option>
+        </select>
+      </div>
+      <div>
+        <strong>ความแรงกระแสน้ำ:</strong>
+        <select id="filterWater">
+          <option value="">ทุกระดับ</option>
+          <option value="1">ระดับ 1</option>
+          <option value="2">ระดับ 2</option>
+          <option value="3">ระดับ 3</option>
+          <option value="4">ระดับ 4</option>
+          <option value="5">ระดับ 5 (อันตรายสูง)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="container">
+    <h3>รายการผู้ประสบภัย (สถานะ: ยังไม่ปิดเคส)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>ชื่อ</th>
+          <th>เบอร์</th>
+          <th>พื้นที่</th>
+          <th>ระดับกระแสน้ำ</th>
+          <th>รายละเอียด</th>
+          <th>พิกัด</th>
+          <th>จัดการ</th>
+        </tr>
+      </thead>
+      <tbody id="caseTableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Leaflet -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Firebase config -->
+  <script src="firebase-config.js"></script>
+
+  <!-- Firebase + Firestore -->
+  <script type="module">
+    import { initializeApp } 
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      query,
+      where,
+      orderBy,
+      onSnapshot,
+      updateDoc,
+      deleteDoc,
+      doc,
+      getDocs,
+      enableIndexedDbPersistence
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+
+    // เปิด offline persistence (ให้ดูข้อมูลที่ sync แล้วได้แม้เน็ตหลุด)
+    enableIndexedDbPersistence(db).catch((err) => {
+      console.log('persistence error', err.code);
+    });
+
+    // ----- แผนที่ -----
+    const map = L.map('map').setView([7.0, 100.5], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
+
+    const levelColor = {
+      1: "#4caf50",
+      2: "#8bc34a",
+      3: "#ffeb3b",
+      4: "#ff9800",
+      5: "#f44336"
+    };
+
+    const markers = {};
+    const tbody   = document.getElementById('caseTableBody');
+    const statusEl = document.getElementById('status');
+    const btnSync  = document.getElementById('btnSync');
+
+    const filterDistrict   = document.getElementById('filterDistrict');
+    const filterSubdistrict= document.getElementById('filterSubdistrict');
+    const filterVillage    = document.getElementById('filterVillage');
+    const filterWater      = document.getElementById('filterWater');
+
+    let lastSnapshot = null;
+
+    function matchesFilter(c) {
+      const region = c.region || {};
+      if (filterDistrict.value    && region.district   !== filterDistrict.value)   return false;
+      if (filterSubdistrict.value && region.subdistrict!== filterSubdistrict.value)return false;
+      if (filterVillage.value     && region.village    !== filterVillage.value)    return false;
+      if (filterWater.value       && Number(filterWater.value) !== Number(c.waterLevel)) return false;
+      return true;
+    }
+
+    function renderSnapshot() {
+      if (!lastSnapshot) return;
+
+      tbody.innerHTML = '';
+      Object.values(markers).forEach(m => map.removeLayer(m));
+      for (const id in markers) delete markers[id];
+
+      lastSnapshot.forEach(docSnap => {
+        const c  = docSnap.data();
+        const id = docSnap.id;
+        if (c.status !== 'open') return;
+        if (!matchesFilter(c))  return;
+
+        const region = c.region || {};
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${c.name || ''}</td>
+          <td>${c.phone ? <a href="tel:${c.phone}">${c.phone}</a> : ''}</td>
+          <td>
+            ${region.province || ''}<br>
+            อ.${region.district || ''} ต.${region.subdistrict || ''} ม.${region.village || ''}
+          </td>
+          <td>ระดับ ${c.waterLevel || '-'}</td>
+          <td>${c.note || ''}</td>
+          <td>${c.lat?.toFixed ? c.lat.toFixed(5) : ''}, ${c.lng?.toFixed ? c.lng.toFixed(5) : ''}</td>
+          <td>
+            <button class="btn-done" data-id="${id}">ช่วยแล้ว</button>
+            <button class="btn-del"  data-id="${id}">ลบ</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+
+        if (typeof c.lat === 'number' && typeof c.lng === 'number') {
+          const color = levelColor[c.waterLevel] || "#000";
+          const m = L.circleMarker([c.lat, c.lng], {
+            radius: 9,
+            color,
+            fillColor: color,
+            fillOpacity: 0.85
+          }).addTo(map)
+            .bindPopup(`
+              <strong>${c.name || ''}</strong><br>
+              เบอร์: ${c.phone || ''}<br>
+              พื้นที่: อ.${region.district || ''} ต.${region.subdistrict || ''} ม.${region.village || ''}<br>
+              ความแรงกระแสน้ำ: ระดับ ${c.waterLevel || '-'}
+            `);
+          markers[id] = m;
+        }
+      });
+
+      statusEl.textContent = 'อัปเดตล่าสุด: ' + new Date().toLocaleTimeString('th-TH');
+    }
+
+    filterDistrict.onchange =
+      filterSubdistrict.onchange =
+      filterVillage.onchange =
+      filterWater.onchange = () => renderSnapshot();
+
+    // Realtime listener
+    const q = query(
+      collection(db, 'cases'),
+      where('status','==','open'),
+      orderBy('createdAt','desc')
+    );
+
+    onSnapshot(q, (snapshot) => {
+      lastSnapshot = snapshot;
+      renderSnapshot();
+    });
+
+    // ปุ่มซิงค์ (บังคับโหลดจากเซิร์ฟเวอร์)
+    btnSync.addEventListener('click', async () => {
+      try {
+        statusEl.textContent = 'กำลังซิงค์...';
+        await getDocs(q);
+        statusEl.textContent = 'ซิงค์เสร็จแล้ว';
+      } catch (err) {
+        statusEl.textContent = 'ซิงค์ไม่สำเร็จ (อาจไม่มีอินเทอร์เน็ต)';
+      }
+    });
+
+    // กดปุ่ม ช่วยแล้ว / ลบ ในตาราง
+    tbody.addEventListener('click', async (e) => {
+      const id = e.target.getAttribute('data-id');
+      if (!id) return;
+
+      const ref = doc(db, 'cases', id);
+
+      if (e.target.classList.contains('btn-done')) {
+        if (confirm('ยืนยันว่าช่วยเหลือเคสนี้แล้ว?')) {
+          await updateDoc(ref, {
+            status: 'resolved'
+          });
+        }
+      } else if (e.target.classList.contains('btn-del')) {
+        if (confirm('ลบเคสนี้ออกจากระบบถาวร?')) {
+          await deleteDoc(ref);
+        }
+      }
+    });
+
+    // แสดงตำแหน่งของหน่วยกู้ภัยเอง (มือถือคนใช้หน้านี้)
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(pos => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        if (!window._meMarker) {
+          window._meMarker = L.circleMarker([lat, lng], {
+            radius: 8,
+            color: "#2196f3",
+            fillColor: "#2196f3",
+            fillOpacity: 0.9
+          }).addTo(map).bindPopup('ตำแหน่งหน่วยกู้ภัย');
+        } else {
+          window._meMarker.setLatLng([lat, lng]);
+        }
+      });
+    }
+  </script>
+</body>
+</html>
