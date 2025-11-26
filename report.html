@@ -5,15 +5,28 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>แจ้งเหตุผู้ประสบภัยน้ำท่วม</title>
 
-  <!-- แผนที่ Leaflet -->
+  <!-- Leaflet map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    body { margin:0; font-family: system-ui, -apple-system, sans-serif; background:#f5f5f5; }
+    * { box-sizing:border-box; }
+    body {
+      margin:0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background:#f5f5f5;
+    }
     #map { height: 45vh; }
 
-    .container { max-width: 480px; margin: auto; padding: 12px; }
-    h2 { margin: 8px 0; text-align:center; }
-    p  { font-size:14px; color:#555; }
+    .container {
+      max-width: 480px;
+      margin: auto;
+      padding: 12px;
+    }
+    h2 {
+      margin: 8px 0;
+      text-align:center;
+      font-size:18px;
+    }
+    p { font-size:14px; color:#555; }
 
     label {
       display:block;
@@ -41,55 +54,64 @@
     }
 
     #status { font-size:13px; margin-top:6px; }
+    .hint { font-size:12px; color:#777; }
   </style>
 </head>
 <body>
+  <!-- แผนที่ให้ผู้ใช้ปักหมุด -->
   <div id="map"></div>
 
   <div class="container">
     <h2>📍 แจ้งตำแหน่งผู้ประสบภัย</h2>
-    <p>เลื่อนหมุดให้ตรงตำแหน่ง หรือใช้ GPS จากมือถือ แล้วกรอกข้อมูลด้านล่าง</p>
+    <p>
+      เลื่อนหมุดบนแผนที่ให้ตรงจุดที่ต้องการความช่วยเหลือ<br>
+      หรือใช้ GPS จากมือถือ (ระบบจะพยายามระบุตำแหน่งให้อัตโนมัติ)
+    </p>
 
     <form id="reportForm">
-      <label>ชื่อผู้แจ้งหรือผู้ประสบภัย</label>
+      <label>ชื่อผู้แจ้งหรือผู้ประสบภัย *</label>
       <input name="name" required>
 
-      <label>เบอร์โทรติดต่อ</label>
+      <label>เบอร์โทรติดต่อ *</label>
       <input name="phone" required>
 
-      <label>จังหวัด</label>
-      <select name="province" required>
-        <option value="">เลือกจังหวัด</option>
+      <label>ที่อยู่ / จุดสังเกต (ไม่บังคับ)</label>
+      <textarea name="address" rows="2"
+        placeholder="เช่น หลังวัด..., ซอย..., ใกล้เสาไฟฟ้าหมายเลข... (ถ้าไม่สะดวกระบุ สามารถเว้นว่างได้)">
+      </textarea>
+
+      <label>จังหวัด (ไม่บังคับ)</label>
+      <select name="province">
+        <option value="">ไม่ระบุ</option>
         <option value="สงขลา">สงขลา</option>
-        <!-- ถ้าต้องการเพิ่มจังหวัด ใส่ option เพิ่มได้ -->
       </select>
 
-      <label>อำเภอ</label>
-      <select name="district" required>
-        <option value="">เลือกอำเภอ</option>
+      <label>อำเภอ (ไม่บังคับ)</label>
+      <select name="district">
+        <option value="">ไม่ระบุ</option>
         <option value="หาดใหญ่">หาดใหญ่</option>
         <option value="เมืองสงขลา">เมืองสงขลา</option>
         <option value="นาหม่อม">นาหม่อม</option>
       </select>
 
-      <label>ตำบล / เขต / เทศบาล</label>
-      <select name="subdistrict" required>
-        <option value="">เลือกตำบล / เขต / เทศบาล</option>
+      <label>ตำบล / เขต / เทศบาล (ไม่บังคับ)</label>
+      <select name="subdistrict">
+        <option value="">ไม่ระบุ</option>
         <option value="บ้านพรุ">บ้านพรุ</option>
         <option value="คลองแห">คลองแห</option>
         <option value="พะวง">พะวง</option>
       </select>
 
-      <label>หมู่บ้าน / ชุมชน</label>
-      <select name="village" required>
-        <option value="">เลือกหมู่บ้าน / ชุมชน</option>
+      <label>หมู่บ้าน / ชุมชน (ไม่บังคับ)</label>
+      <select name="village">
+        <option value="">ไม่ระบุ</option>
         <option value="หมู่ 1">หมู่ 1</option>
         <option value="หมู่ 2">หมู่ 2</option>
         <option value="หมู่ 3">หมู่ 3</option>
         <option value="หมู่ 4">หมู่ 4</option>
       </select>
 
-      <label>ความแรงของกระแสน้ำ</label>
+      <label>ความแรงของกระแสน้ำ *</label>
       <select name="waterLevel" required>
         <option value="">เลือกความแรงกระแสน้ำ</option>
         <option value="1">ระดับ 1 - น้ำแทบไม่ไหล</option>
@@ -99,22 +121,25 @@
         <option value="5">ระดับ 5 - น้ำไหลแรงมาก อันตรายสูง</option>
       </select>
 
-      <label>รายละเอียดเพิ่มเติม</label>
-      <textarea name="note" rows="3" placeholder="เช่น มีผู้ป่วยติดเตียง, เด็กเล็ก, อยู่ชั้น 2 ฯลฯ"></textarea>
+      <label>รายละเอียดเพิ่มเติม (ไม่บังคับ)</label>
+      <textarea name="note" rows="3"
+        placeholder="เช่น มีผู้ป่วยติดเตียง, เด็กเล็ก, อยู่ชั้น 2 ฯลฯ">
+      </textarea>
 
+      <p class="hint">* ต้องปักหมุดหรือเปิด GPS ให้ระบบทราบตำแหน่ง ก่อนกดส่งข้อมูล</p>
       <button type="submit">ส่งข้อมูลผู้ประสบภัย</button>
     </form>
 
     <p id="status"></p>
   </div>
 
-  <!-- Leaflet -->
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Firebase config (ไฟล์ที่อยู่ใน repo แล้ว) -->
+  <!-- firebase config จากไฟล์ firebase-config.js -->
   <script src="firebase-config.js"></script>
 
-  <!-- Firebase v10 แบบโมดูล -->
+  <!-- Firebase v10 + Firestore -->
   <script type="module">
     import { initializeApp } 
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -128,13 +153,17 @@
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
-    // ---------- แผนที่ ----------
+    const statusEl = document.getElementById('status');
+    const form = document.getElementById('reportForm');
+
+    // ---------- แผนที่ + หมุด ----------
     const map = L.map('map').setView([7.0, 100.5], 11);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19
     }).addTo(map);
 
     let marker = L.marker([7.0, 100.5], { draggable:true }).addTo(map);
+    let hasUserLocation = false; // true เมื่อได้ GPS หรือผู้ใช้ขยับหมุด
 
     // ใช้ GPS มือถือ ถ้ามี
     if (navigator.geolocation) {
@@ -143,27 +172,36 @@
         const lng = pos.coords.longitude;
         marker.setLatLng([lat, lng]);
         map.setView([lat, lng], 15);
+        hasUserLocation = true;
       });
     }
 
     // คลิกแผนที่เพื่อย้ายหมุด
     map.on('click', e => {
       marker.setLatLng(e.latlng);
+      hasUserLocation = true;
+    });
+
+    marker.on('dragend', () => {
+      hasUserLocation = true;
     });
 
     // ---------- ส่งฟอร์ม ----------
-    const form = document.getElementById('reportForm');
-    const statusEl = document.getElementById('status');
-
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      if (!hasUserLocation) {
+        alert('กรุณาปักหมุดหรือตรวจสอบว่าเปิด GPS แล้ว ก่อนส่งข้อมูล');
+        return;
+      }
 
       const latlng = marker.getLatLng();
 
       const data = {
-        name : form.name.value,
-        phone: form.phone.value,
-        note : form.note.value,
+        name : form.name.value.trim(),
+        phone: form.phone.value.trim(),
+        address: form.address.value.trim(), // ที่อยู่พิมพ์เอง (ไม่บังคับ)
+        note : form.note.value.trim(),
         lat  : latlng.lat,
         lng  : latlng.lng,
         region: {
@@ -172,7 +210,7 @@
           subdistrict: form.subdistrict.value,
           village    : form.village.value
         },
-        waterLevel: Number(form.waterLevel.value), // 1–5 ความแรงน้ำ
+        waterLevel: Number(form.waterLevel.value), // 1–5
         status    : 'open',
         createdAt : serverTimestamp()
       };
@@ -183,6 +221,7 @@
         await addDoc(collection(db, 'cases'), data);
         statusEl.textContent = 'ส่งข้อมูลเรียบร้อย ขอบคุณครับ ✅';
         form.reset();
+        hasUserLocation = false; // บังคับให้ปักหมุดใหม่รอบหน้า
       } catch (err) {
         console.error(err);
         statusEl.textContent = 'ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
