@@ -132,7 +132,6 @@
       getFirestore,
       collection,
       query,
-      where,
       orderBy,
       onSnapshot,
       updateDoc,
@@ -145,7 +144,7 @@
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
-    // เปิด offline persistence (ให้ดูข้อมูลที่ sync แล้วได้แม้เน็ตหลุด)
+    // เปิด offline persistence (ดูข้อมูลที่ sync แล้วได้แม้เน็ตหลุด)
     enableIndexedDbPersistence(db).catch((err) => {
       console.log('persistence error', err.code);
     });
@@ -195,7 +194,9 @@
       lastSnapshot.forEach(docSnap => {
         const c  = docSnap.data();
         const id = docSnap.id;
-        if (c.status !== 'open') return;
+
+        // ข้ามเคสที่ปิดแล้ว
+        if (c.status && c.status !== 'open') return;
         if (!matchesFilter(c))  return;
 
         const region = c.region || {};
@@ -243,10 +244,9 @@
       filterVillage.onchange =
       filterWater.onchange = () => renderSnapshot();
 
-    // Realtime listener
+    // Realtime listener (เอาเฉพาะ orderBy เพื่อเลี่ยงปัญหา index)
     const q = query(
       collection(db, 'cases'),
-      where('status','==','open'),
       orderBy('createdAt','desc')
     );
 
@@ -255,7 +255,7 @@
       renderSnapshot();
     });
 
-    // ปุ่มซิงค์ (บังคับโหลดจากเซิร์ฟเวอร์)
+    // ปุ่มซิงค์
     btnSync.addEventListener('click', async () => {
       try {
         statusEl.textContent = 'กำลังซิงค์...';
@@ -266,7 +266,7 @@
       }
     });
 
-    // กดปุ่ม ช่วยแล้ว / ลบ ในตาราง
+    // กดปุ่ม ช่วยแล้ว / ลบ
     tbody.addEventListener('click', async (e) => {
       const id = e.target.getAttribute('data-id');
       if (!id) return;
@@ -275,9 +275,7 @@
 
       if (e.target.classList.contains('btn-done')) {
         if (confirm('ยืนยันว่าช่วยเหลือเคสนี้แล้ว?')) {
-          await updateDoc(ref, {
-            status: 'resolved'
-          });
+          await updateDoc(ref, { status: 'resolved' });
         }
       } else if (e.target.classList.contains('btn-del')) {
         if (confirm('ลบเคสนี้ออกจากระบบถาวร?')) {
@@ -286,7 +284,7 @@
       }
     });
 
-    // แสดงตำแหน่งของหน่วยกู้ภัยเอง (มือถือคนใช้หน้านี้)
+    // แสดงตำแหน่งของหน่วยกู้ภัยเอง
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(pos => {
         const lat = pos.coords.latitude;
