@@ -38,7 +38,6 @@
       border-radius:6px;
       cursor:pointer;
     }
-    .btn-sync { background:#1565c0; color:#fff; }
     .btn-done { background:#43a047; color:#fff; margin-right:4px; }
     .btn-del  { background:#e53935; color:#fff; }
 
@@ -55,53 +54,14 @@
 <body>
   <div class="topbar">
     <h1>🚑 ระบบหน่วยกู้ภัย - SOS</h1>
-    <small>ดูตำแหน่งผู้ประสบภัย แยกตามพื้นที่ และจัดการเคส</small>
-    <div style="margin-top:4px;">
-      <button class="btn-sync" id="btnSync">ซิงค์ข้อมูลล่าสุด</button>
-      <span id="status"></span>
-    </div>
-
-    <div class="filters">
-      <div>
-        <strong>กรองพื้นที่:</strong>
-        <select id="filterDistrict">
-          <option value="">ทุกอำเภอ</option>
-          <option value="หาดใหญ่">หาดใหญ่</option>
-          <option value="เมืองสงขลา">เมืองสงขลา</option>
-          <option value="นาหม่อม">นาหม่อม</option>
-        </select>
-        <select id="filterSubdistrict">
-          <option value="">ทุกตำบล / เขต / เทศบาล</option>
-          <option value="บ้านพรุ">บ้านพรุ</option>
-          <option value="คลองแห">คลองแห</option>
-          <option value="พะวง">พะวง</option>
-        </select>
-        <select id="filterVillage">
-          <option value="">ทุกหมู่บ้าน / ชุมชน</option>
-          <option value="หมู่ 1">หมู่ 1</option>
-          <option value="หมู่ 2">หมู่ 2</option>
-          <option value="หมู่ 3">หมู่ 3</option>
-          <option value="หมู่ 4">หมู่ 4</option>
-        </select>
-      </div>
-      <div>
-        <strong>ความแรงกระแสน้ำ:</strong>
-        <select id="filterWater">
-          <option value="">ทุกระดับ</option>
-          <option value="1">ระดับ 1</option>
-          <option value="2">ระดับ 2</option>
-          <option value="3">ระดับ 3</option>
-          <option value="4">ระดับ 4</option>
-          <option value="5">ระดับ 5 (อันตรายสูง)</option>
-        </select>
-      </div>
-    </div>
+    <small>ดูตำแหน่งผู้ประสบภัยจากฐานข้อมูลแบบเรียลไทม์</small>
+    <div id="status"></div>
   </div>
 
   <div id="map"></div>
 
   <div class="container">
-    <h3>รายการผู้ประสบภัย (สถานะ: ยังไม่ปิดเคส)</h3>
+    <h3>รายการผู้ประสบภัย (ดึงจาก Firestore ทั้งหมด)</h3>
     <table>
       <thead>
         <tr>
@@ -124,30 +84,22 @@
   <!-- Firebase config -->
   <script src="firebase-config.js"></script>
 
-  <!-- Firebase + Firestore -->
+  <!-- Firebase + Firestore (เวอร์ชันตัดให้เหลือง่ายที่สุด) -->
   <script type="module">
     import { initializeApp } 
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
       getFirestore,
       collection,
-      query,
-      orderBy,
       onSnapshot,
       updateDoc,
       deleteDoc,
-      doc,
-      getDocs,
-      enableIndexedDbPersistence
+      doc
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    // ใช้ config จาก firebase-config.js
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
-
-    // เปิด offline persistence (ดูข้อมูลที่ sync แล้วได้แม้เน็ตหลุด)
-    enableIndexedDbPersistence(db).catch((err) => {
-      console.log('persistence error', err.code);
-    });
 
     // ----- แผนที่ -----
     const map = L.map('map').setView([7.0, 100.5], 11);
@@ -166,51 +118,44 @@
     const markers = {};
     const tbody   = document.getElementById('caseTableBody');
     const statusEl = document.getElementById('status');
-    const btnSync  = document.getElementById('btnSync');
 
-    const filterDistrict   = document.getElementById('filterDistrict');
-    const filterSubdistrict= document.getElementById('filterSubdistrict');
-    const filterVillage    = document.getElementById('filterVillage');
-    const filterWater      = document.getElementById('filterWater');
-
-    let lastSnapshot = null;
-
-    function matchesFilter(c) {
-      const region = c.region || {};
-      if (filterDistrict.value    && region.district   !== filterDistrict.value)   return false;
-      if (filterSubdistrict.value && region.subdistrict!== filterSubdistrict.value)return false;
-      if (filterVillage.value     && region.village    !== filterVillage.value)    return false;
-      if (filterWater.value       && Number(filterWater.value) !== Number(c.waterLevel)) return false;
-      return true;
-    }
-
-    function renderSnapshot() {
-      if (!lastSnapshot) return;
-
+    function renderSnapshot(snapshot) {
+      // เคลียร์ตาราง + มาร์กเกอร์เก่า
       tbody.innerHTML = '';
-      Object.values(markers).forEach(m => map.removeLayer(m));
-      for (const id in markers) delete markers[id];
+      for (const id in markers) {
+        map.removeLayer(markers[id]);
+        delete markers[id];
+      }
 
-      lastSnapshot.forEach(docSnap => {
+      if (snapshot.empty) {
+        statusEl.textContent = 'ไม่มีข้อมูลผู้ประสบภัยในฐานข้อมูล';
+        return;
+      }
+
+      snapshot.forEach(docSnap => {
         const c  = docSnap.data();
         const id = docSnap.id;
 
-        // ข้ามเคสที่ปิดแล้ว
-        if (c.status && c.status !== 'open') return;
-        if (!matchesFilter(c))  return;
-
         const region = c.region || {};
+        const name  = c.name  || '';
+        const phone = c.phone || '';
+        const note  = c.note  || '';
+        const lat   = typeof c.lat === 'number' ? c.lat : null;
+        const lng   = typeof c.lng === 'number' ? c.lng : null;
+        const water = c.waterLevel || '-';
+
+        // แสดงในตาราง
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${c.name || ''}</td>
-          <td>${c.phone ? <a href="tel:${c.phone}">${c.phone}</a> : ''}</td>
+          <td>${name}</td>
+          <td>${phone ? <a href="tel:${phone}">${phone}</a> : ''}</td>
           <td>
             ${region.province || ''}<br>
             อ.${region.district || ''} ต.${region.subdistrict || ''} ม.${region.village || ''}
           </td>
-          <td>ระดับ ${c.waterLevel || '-'}</td>
-          <td>${c.note || ''}</td>
-          <td>${c.lat?.toFixed ? c.lat.toFixed(5) : ''}, ${c.lng?.toFixed ? c.lng.toFixed(5) : ''}</td>
+          <td>ระดับ ${water}</td>
+          <td>${note}</td>
+          <td>${lat !== null && lng !== null ? ${lat.toFixed(5)}, ${lng.toFixed(5)} : ''}</td>
           <td>
             <button class="btn-done" data-id="${id}">ช่วยแล้ว</button>
             <button class="btn-del"  data-id="${id}">ลบ</button>
@@ -218,73 +163,56 @@
         `;
         tbody.appendChild(tr);
 
-        if (typeof c.lat === 'number' && typeof c.lng === 'number') {
-          const color = levelColor[c.waterLevel] || "#000";
-          const m = L.circleMarker([c.lat, c.lng], {
+        // แสดงบนแผนที่
+        if (lat !== null && lng !== null) {
+          const color = levelColor[water] || "#000";
+          const marker = L.circleMarker([lat, lng], {
             radius: 9,
             color,
             fillColor: color,
             fillOpacity: 0.85
           }).addTo(map)
             .bindPopup(`
-              <strong>${c.name || ''}</strong><br>
-              เบอร์: ${c.phone || ''}<br>
+              <strong>${name}</strong><br>
+              เบอร์: ${phone}<br>
               พื้นที่: อ.${region.district || ''} ต.${region.subdistrict || ''} ม.${region.village || ''}<br>
-              ความแรงกระแสน้ำ: ระดับ ${c.waterLevel || '-'}
+              ความแรงกระแสน้ำ: ระดับ ${water}
             `);
-          markers[id] = m;
+          markers[id] = marker;
         }
       });
 
-      statusEl.textContent = 'อัปเดตล่าสุด: ' + new Date().toLocaleTimeString('th-TH');
+      statusEl.textContent = 'เชื่อมต่อฐานข้อมูลเรียบร้อย (อัปเดตอัตโนมัติ)';
     }
 
-    filterDistrict.onchange =
-      filterSubdistrict.onchange =
-      filterVillage.onchange =
-      filterWater.onchange = () => renderSnapshot();
-
-    // Realtime listener (เอาเฉพาะ orderBy เพื่อเลี่ยงปัญหา index)
-    const q = query(
-      collection(db, 'cases'),
-      orderBy('createdAt','desc')
-    );
-
-    onSnapshot(q, (snapshot) => {
-      lastSnapshot = snapshot;
-      renderSnapshot();
+    // ดึงข้อมูลแบบ real-time จาก collection 'cases' ทั้งหมด
+    onSnapshot(collection(db, 'cases'), (snapshot) => {
+      renderSnapshot(snapshot);
+    }, (error) => {
+      console.error(error);
+      statusEl.textContent = 'อ่านข้อมูลจาก Firestore ไม่สำเร็จ: ' + error.message;
     });
 
-    // ปุ่มซิงค์
-    btnSync.addEventListener('click', async () => {
-      try {
-        statusEl.textContent = 'กำลังซิงค์...';
-        await getDocs(q);
-        statusEl.textContent = 'ซิงค์เสร็จแล้ว';
-      } catch (err) {
-        statusEl.textContent = 'ซิงค์ไม่สำเร็จ (อาจไม่มีอินเทอร์เน็ต)';
-      }
-    });
-
-    // กดปุ่ม ช่วยแล้ว / ลบ
+    // จัดการปุ่ม "ช่วยแล้ว" และ "ลบ"
     tbody.addEventListener('click', async (e) => {
       const id = e.target.getAttribute('data-id');
       if (!id) return;
-
       const ref = doc(db, 'cases', id);
 
       if (e.target.classList.contains('btn-done')) {
         if (confirm('ยืนยันว่าช่วยเหลือเคสนี้แล้ว?')) {
           await updateDoc(ref, { status: 'resolved' });
+          alert('บันทึกว่าเคสนี้ช่วยแล้ว');
         }
       } else if (e.target.classList.contains('btn-del')) {
         if (confirm('ลบเคสนี้ออกจากระบบถาวร?')) {
           await deleteDoc(ref);
+          alert('ลบเคสเรียบร้อย');
         }
       }
     });
 
-    // แสดงตำแหน่งของหน่วยกู้ภัยเอง
+    // แสดงตำแหน่งของหน่วยกู้ภัยเอง (อุปกรณ์ที่เปิดหน้านี้)
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(pos => {
         const lat = pos.coords.latitude;
