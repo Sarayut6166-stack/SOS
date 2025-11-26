@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>แจ้งเหตุผู้ประสบภัยน้ำท่วม</title>
+
+  <!-- แผนที่ Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { margin:0; font-family: system-ui, -apple-system, sans-serif; background:#f5f5f5; }
+    #map { height: 45vh; }
+
+    .container { max-width: 480px; margin: auto; padding: 12px; }
+    h2 { margin: 8px 0; text-align:center; }
+    p  { font-size:14px; color:#555; }
+
+    label {
+      display:block;
+      margin-top:8px;
+      font-size:14px;
+    }
+    input, textarea, select, button {
+      width: 100%;
+      margin-top:4px;
+      padding: 8px;
+      font-size: 15px;
+      box-sizing: border-box;
+      border-radius:8px;
+      border:1px solid #ccc;
+    }
+    textarea { resize: vertical; }
+
+    button {
+      margin-top:14px;
+      background:#e53935;
+      color:#fff;
+      border:none;
+      font-weight:600;
+      box-shadow:0 3px 8px rgba(0,0,0,0.2);
+    }
+
+    #status { font-size:13px; margin-top:6px; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="container">
+    <h2>📍 แจ้งตำแหน่งผู้ประสบภัย</h2>
+    <p>เลื่อนหมุดให้ตรงตำแหน่ง หรือใช้ GPS จากมือถือ แล้วกรอกข้อมูลด้านล่าง</p>
+
+    <form id="reportForm">
+      <label>ชื่อผู้แจ้งหรือผู้ประสบภัย</label>
+      <input name="name" required>
+
+      <label>เบอร์โทรติดต่อ</label>
+      <input name="phone" required>
+
+      <label>จังหวัด</label>
+      <select name="province" required>
+        <option value="">เลือกจังหวัด</option>
+        <option value="สงขลา">สงขลา</option>
+        <!-- ถ้าต้องการเพิ่มจังหวัด ใส่ option เพิ่มได้ -->
+      </select>
+
+      <label>อำเภอ</label>
+      <select name="district" required>
+        <option value="">เลือกอำเภอ</option>
+        <option value="หาดใหญ่">หาดใหญ่</option>
+        <option value="เมืองสงขลา">เมืองสงขลา</option>
+        <option value="นาหม่อม">นาหม่อม</option>
+      </select>
+
+      <label>ตำบล / เขต / เทศบาล</label>
+      <select name="subdistrict" required>
+        <option value="">เลือกตำบล / เขต / เทศบาล</option>
+        <option value="บ้านพรุ">บ้านพรุ</option>
+        <option value="คลองแห">คลองแห</option>
+        <option value="พะวง">พะวง</option>
+      </select>
+
+      <label>หมู่บ้าน / ชุมชน</label>
+      <select name="village" required>
+        <option value="">เลือกหมู่บ้าน / ชุมชน</option>
+        <option value="หมู่ 1">หมู่ 1</option>
+        <option value="หมู่ 2">หมู่ 2</option>
+        <option value="หมู่ 3">หมู่ 3</option>
+        <option value="หมู่ 4">หมู่ 4</option>
+      </select>
+
+      <label>ความแรงของกระแสน้ำ</label>
+      <select name="waterLevel" required>
+        <option value="">เลือกความแรงกระแสน้ำ</option>
+        <option value="1">ระดับ 1 - น้ำแทบไม่ไหล</option>
+        <option value="2">ระดับ 2 - น้ำไหลช้า</option>
+        <option value="3">ระดับ 3 - น้ำไหลปานกลาง</option>
+        <option value="4">ระดับ 4 - น้ำไหลแรง</option>
+        <option value="5">ระดับ 5 - น้ำไหลแรงมาก อันตรายสูง</option>
+      </select>
+
+      <label>รายละเอียดเพิ่มเติม</label>
+      <textarea name="note" rows="3" placeholder="เช่น มีผู้ป่วยติดเตียง, เด็กเล็ก, อยู่ชั้น 2 ฯลฯ"></textarea>
+
+      <button type="submit">ส่งข้อมูลผู้ประสบภัย</button>
+    </form>
+
+    <p id="status"></p>
+  </div>
+
+  <!-- Leaflet -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Firebase config (ไฟล์ที่อยู่ใน repo แล้ว) -->
+  <script src="firebase-config.js"></script>
+
+  <!-- Firebase v10 แบบโมดูล -->
+  <script type="module">
+    import { initializeApp } 
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { 
+      getFirestore, 
+      collection, 
+      addDoc, 
+      serverTimestamp 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+
+    // ---------- แผนที่ ----------
+    const map = L.map('map').setView([7.0, 100.5], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
+
+    let marker = L.marker([7.0, 100.5], { draggable:true }).addTo(map);
+
+    // ใช้ GPS มือถือ ถ้ามี
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        marker.setLatLng([lat, lng]);
+        map.setView([lat, lng], 15);
+      });
+    }
+
+    // คลิกแผนที่เพื่อย้ายหมุด
+    map.on('click', e => {
+      marker.setLatLng(e.latlng);
+    });
+
+    // ---------- ส่งฟอร์ม ----------
+    const form = document.getElementById('reportForm');
+    const statusEl = document.getElementById('status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const latlng = marker.getLatLng();
+
+      const data = {
+        name : form.name.value,
+        phone: form.phone.value,
+        note : form.note.value,
+        lat  : latlng.lat,
+        lng  : latlng.lng,
+        region: {
+          province   : form.province.value,
+          district   : form.district.value,
+          subdistrict: form.subdistrict.value,
+          village    : form.village.value
+        },
+        waterLevel: Number(form.waterLevel.value), // 1–5 ความแรงน้ำ
+        status    : 'open',
+        createdAt : serverTimestamp()
+      };
+
+      statusEl.textContent = 'กำลังส่งข้อมูล...';
+
+      try {
+        await addDoc(collection(db, 'cases'), data);
+        statusEl.textContent = 'ส่งข้อมูลเรียบร้อย ขอบคุณครับ ✅';
+        form.reset();
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = 'ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+      }
+    });
+  </script>
+</body>
+</html>
