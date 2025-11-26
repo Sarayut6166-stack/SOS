@@ -15,7 +15,9 @@
       color:#fff;
     }
     .topbar h1 { margin:0; font-size:18px; }
-    .topbar small { font-size:12px; }
+    .topbar small { font-size:12px; display:block; }
+    #status { font-size:12px; margin-top:4px; color:#ffeb3b; }
+    #status.error { color:#ff5252; font-weight:bold; }
 
     #map { height: 40vh; }
 
@@ -39,8 +41,17 @@
     .btn-done { background:#43a047; color:#fff; margin-right:4px; }
     .btn-del  { background:#e53935; color:#fff; }
 
-    #status { font-size:12px; margin-top:4px; color:#ffeb3b; }
-    #status.error { color:#ff5252; font-weight:bold; }
+    #debug-box {
+      margin-top:8px;
+      background:#111;
+      color:#0f0;
+      font-size:11px;
+      padding:6px;
+      border-radius:4px;
+      max-height:180px;
+      overflow:auto;
+      white-space:pre-wrap;
+    }
   </style>
 </head>
 <body>
@@ -68,14 +79,17 @@
       </thead>
       <tbody id="caseTableBody"></tbody>
     </table>
+
+    <!-- กล่อง debug ให้ดูดาต้าดิบจาก Firestore -->
+    <div id="debug-box"></div>
   </div>
 
   <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- ใช้ Firebase แบบเขียน config ตรง ๆ ในไฟล์นี้ (ไม่พึ่งไฟล์อื่น) -->
+  <!-- ใช้ Firebase แบบ config ตรง ๆ -->
   <script type="module">
-    // ==== CONFIG Firebase ของโปรเจกต์พี่ ====
+    // ==== CONFIG โปรเจกต์ sos-rescue-system ====
     const firebaseConfig = {
       apiKey: "AIzaSyAbCi1b3xS4b2F-9gH14l8iv_r3X0MzW",
       authDomain: "sos-rescue-system.firebaseapp.com",
@@ -99,17 +113,30 @@
 
     const statusEl = document.getElementById('status');
     const tbody    = document.getElementById('caseTableBody');
+    const debugBox = document.getElementById('debug-box');
 
-    // เริ่มต้น Firebase
     let db;
+
+    function debug(msg, obj) {
+      const time = new Date().toLocaleTimeString();
+      debugBox.textContent += `[${time}] ${msg}\n`;
+      if (obj !== undefined) {
+        debugBox.textContent += JSON.stringify(obj, null, 2) + "\n";
+      }
+      debugBox.textContent += "------------------------------\n";
+    }
+
+    // เริ่ม Firebase
     try {
       const app = initializeApp(firebaseConfig);
       db = getFirestore(app);
-      statusEl.textContent = 'เชื่อมต่อ Firebase แล้ว กำลังโหลดข้อมูล...';
+      statusEl.textContent = 'เชื่อมต่อ Firebase สำเร็จ กำลังโหลดข้อมูลจาก Firestore...';
+      debug('Firebase initialized', firebaseConfig);
     } catch (err) {
       console.error(err);
       statusEl.textContent = '❌ เชื่อมต่อ Firebase ไม่สำเร็จ: ' + err.message;
       statusEl.classList.add('error');
+      debug('Firebase init error', { message: err.message });
     }
 
     // ตั้งค่าแผนที่
@@ -128,9 +155,16 @@
     };
 
     async function loadCases() {
-      if (!db) return;
+      if (!db) {
+        debug('loadCases skipped: no db');
+        return;
+      }
       try {
+        debug('Calling getDocs(cases)...');
         const snap = await getDocs(collection(db, 'cases'));
+
+        debug('getDocs result', { size: snap.size });
+
         tbody.innerHTML = '';
         for (const id in markers) {
           map.removeLayer(markers[id]);
@@ -138,15 +172,18 @@
         }
 
         if (snap.empty) {
-          statusEl.textContent = 'เชื่อมต่อ Firestore แล้ว แต่ยังไม่มีข้อมูลผู้ประสบภัย';
+          statusEl.textContent = 'เชื่อมต่อ Firestore แล้ว แต่ยังไม่มีข้อมูลผู้ประสบภัย (snap.size = 0)';
           return;
         }
 
+        const raw = [];
         snap.forEach(docSnap => {
-          const c = docSnap.data();
-          const id = docSnap.id;
+          raw.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        debug('Raw documents', raw);
 
-          // แสดงเฉพาะเคสที่ยังไม่ปิด
+        raw.forEach(c => {
+          // แสดงเฉพาะ status = "open" หรือไม่มี status
           if (c.status && c.status !== 'open') return;
 
           const region = c.region || {};
@@ -155,7 +192,6 @@
           const note  = c.note  || '';
           const lat   = typeof c.lat === 'number' ? c.lat : null;
           const lng   = typeof c.lng === 'number' ? c.lng : null;
-          // รองรับทั้ง waterLevel และ waterlevel
           const water = c.waterLevel ?? c.waterlevel ?? '-';
 
           const tr = document.createElement('tr');
@@ -170,13 +206,12 @@
             <td>${note}</td>
             <td>${lat !== null && lng !== null ? ${lat.toFixed(5)}, ${lng.toFixed(5)} : ''}</td>
             <td>
-              <button class="btn-done" data-id="${id}">ช่วยแล้ว</button>
-              <button class="btn-del"  data-id="${id}">ลบ</button>
+              <button class="btn-done" data-id="${c.id}">ช่วยแล้ว</button>
+              <button class="btn-del"  data-id="${c.id}">ลบ</button>
             </td>
           `;
           tbody.appendChild(tr);
 
-          // มาร์กเกอร์บนแผนที่
           if (lat !== null && lng !== null) {
             const color = levelColor[water] || "#000";
             const marker = L.circleMarker([lat, lng], {
@@ -191,22 +226,22 @@
                 พื้นที่: อ.${region.district || ''} ต.${region.subdistrict || ''} ม.${region.village || ''}<br>
                 ความแรงกระแสน้ำ: ระดับ ${water}
               `);
-            markers[id] = marker;
+            markers[c.id] = marker;
           }
         });
 
-        statusEl.textContent = 'โหลดข้อมูลจาก Firestore สำเร็จ';
+        statusEl.textContent = 'โหลดข้อมูลจาก Firestore สำเร็จ (เอกสารทั้งหมด ' + raw.length + ' รายการ)';
       } catch (err) {
         console.error(err);
         statusEl.textContent = '❌ อ่านข้อมูลจาก Firestore ไม่สำเร็จ: ' + err.message;
         statusEl.classList.add('error');
+        debug('getDocs error', { message: err.message });
       }
     }
 
-    // โหลดข้อมูลครั้งแรก
     loadCases();
 
-    // กดปุ่ม "ช่วยแล้ว" / "ลบ"
+    // ปุ่มจัดการ
     tbody.addEventListener('click', async (e) => {
       const id = e.target.getAttribute('data-id');
       if (!id || !db) return;
@@ -227,7 +262,7 @@
       }
     });
 
-    // แสดงตำแหน่งหน่วยกู้ภัยเอง
+    // ตำแหน่งหน่วยกู้ภัย
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(pos => {
         const lat = pos.coords.latitude;
