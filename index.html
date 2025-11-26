@@ -1,146 +1,87 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SOS น้ำท่วม - ขอความช่วยเหลือ</title>
-  <style>
-    body {
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-      padding: 16px;
-      background: #f5f5f5;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 8px;
-    }
-    p {
-      text-align: center;
-      margin-top: 0;
-      margin-bottom: 16px;
-    }
-    .btn {
-      display: block;
-      width: 100%;
-      padding: 16px;
-      margin: 8px 0;
-      font-size: 18px;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-    }
-    .btn-sos-call {
-      background: #e53935;
-      color: white;
-    }
-    .btn-sos-sms {
-      background: #fb8c00;
-      color: white;
-    }
-    #status {
-      margin-top: 12px;
-      padding: 8px;
-      background: white;
-      border-radius: 8px;
-      font-size: 14px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOS Rescue System</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+            font-family: 'Prompt', sans-serif;
+        }
+
+        .app-container {
+            max-width: 450px;
+            margin: auto;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            margin-top: 50px;
+            font-size: 28px;
+            font-weight: 700;
+            color: #d60000;
+        }
+
+        p {
+            margin-top: -10px;
+            font-size: 16px;
+            color: #444;
+        }
+
+        .menu {
+            margin-top: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .menu-btn {
+            padding: 18px;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            border-radius: 12px;
+            font-size: 18px;
+            display: block;
+            text-align: center;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .danger {
+            background: #ff2e2e;
+        }
+
+        .safe {
+            background: #0077ff;
+        }
+
+        .footer {
+            margin-top: 50px;
+            color: #888;
+            font-size: 13px;
+        }
+
+    </style>
 </head>
+
 <body>
-  <h1>SOS น้ำท่วม</h1>
-  <p>กดปุ่มด้านล่างเพื่อแจ้งขอความช่วยเหลือไปที่ 0814176166</p>
+    <div class="app-container">
+        <h1>🚨 SOS RESCUE</h1>
+        <p>ระบบแจ้งเหตุฉุกเฉินสำหรับผู้ประสบภัยน้ำท่วม</p>
 
-  <button class="btn btn-sos-call" onclick="callCenter()">
-    📞 โทรหาศูนย์ช่วยเหลือ (081-417-6166)
-  </button>
+        <div class="menu">
+            <a href="report.html" class="menu-btn danger">แจ้งเหตุฉุกเฉิน</a>
+            <a href="rescue.html" class="menu-btn safe">เข้าสู่ระบบเจ้าหน้าที่กู้ภัย</a>
+        </div>
 
-  <button class="btn btn-sos-sms" onclick="sendSOSsms()">
-    📩 ส่ง SMS + ตำแหน่งให้ศูนย์
-  </button>
-
-  <div id="status">กำลังดึงตำแหน่ง (ต้องกดอนุญาต Location ก่อน)</div>
-
-  <script>
-    // เบอร์ศูนย์ของคุณ
-    const CENTER_PHONE = "0814176166";
-    let lastLat = null;
-    let lastLon = null;
-    let lastAcc = null;
-
-    // ขอดึงตำแหน่งทันทีที่เปิดหน้า
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          lastLat = pos.coords.latitude;
-          lastLon = pos.coords.longitude;
-          lastAcc = pos.coords.accuracy;
-
-          document.getElementById("status").innerText =
-            "พิกัดปัจจุบัน: " +
-            lastLat.toFixed(6) +
-            ", " +
-            lastLon.toFixed(6) +
-            " (คลาดเคลื่อน ~ " +
-            Math.round(lastAcc) +
-            " เมตร)";
-        },
-        (err) => {
-          document.getElementById("status").innerText =
-            "ดึงตำแหน่งไม่สำเร็จ: " + err.message;
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 10000,
-        }
-      );
-    } else {
-      document.getElementById("status").innerText =
-        "อุปกรณ์นี้ไม่รองรับการอ่านตำแหน่ง";
-    }
-
-    function callCenter() {
-      // เปิดหน้าจอโทรออกไปที่เบอร์คุณ
-      window.location.href = "tel:" + CENTER_PHONE;
-    }
-
-    function sendSOSsms() {
-      const now = new Date();
-      const timeStr =
-        now.toLocaleDateString("th-TH") +
-        " " +
-        now.toLocaleTimeString("th-TH");
-
-      let body = "SOS น้ำท่วม ขอความช่วยเหลือ%0A";
-      body += "ส่งถึงเบอร์: 0814176166%0A";
-      body += "เวลา: " + encodeURIComponent(timeStr) + "%0A";
-
-      if (lastLat && lastLon) {
-        body +=
-          "พิกัด: " +
-          encodeURIComponent(lastLat + ", " + lastLon) +
-          "%0A";
-        if (lastAcc) {
-          body +=
-            "คลาดเคลื่อนประมาณ: " +
-            encodeURIComponent(Math.round(lastAcc) + " เมตร") +
-            "%0A";
-        }
-        // เผื่อไว้ตอนมีเน็ต เอาไปเปิดแผนที่ได้
-        body +=
-          "ลิงก์แผนที่: " +
-          encodeURIComponent(
-            "https://www.google.com/maps?q=" + lastLat + "," + lastLon
-          );
-      } else {
-        body +=
-          "ไม่สามารถอ่านพิกัดได้ โปรดโทรบอกตำแหน่งให้เจ้าหน้าที่ทางโทรศัพท์";
-      }
-
-      // เปิดแอพ SMS พร้อมข้อความ
-      const smsUrl = "sms:" + CENTER_PHONE + "?body=" + body;
-      window.location.href = smsUrl;
-    }
-  </script>
+        <div class="footer">
+            Powered by Sarayut | SOS Rescue System
+        </div>
+    </div>
 </body>
 </html>
