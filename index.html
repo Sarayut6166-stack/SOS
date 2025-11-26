@@ -1,107 +1,175 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOS Rescue System</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #f5f5f5;
-            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SOS Rescue System</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
 
-        .app-container {
-            max-width: 450px;
-            margin: auto;
-            padding: 20px;
-            text-align: center;
-        }
+    .header {
+      background: #1976d2;
+      color: #fff;
+      padding: 18px 12px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+    .header p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      opacity: 0.95;
+    }
 
-        h1 {
-            margin-top: 50px;
-            font-size: 28px;
-            font-weight: 700;
-            color: #d60000;
-        }
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 14px 10px 24px;
+    }
 
-        p {
-            margin-top: -10px;
-            font-size: 16px;
-            color: #444;
-        }
+    .menu {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
 
-        .menu {
-            margin-top: 40px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
+    .menu a {
+      display: block;
+      text-align: center;
+      text-decoration: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 15px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+      transition: transform .08s ease, box-shadow .08s ease;
+    }
+    .menu a:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.18);
+    }
 
-        .menu-btn {
-            padding: 18px;
-            text-decoration: none;
-            color: white;
-            font-weight: bold;
-            border-radius: 12px;
-            font-size: 18px;
-            display: block;
-            text-align: center;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
-        }
+    .btn-danger {
+      background: #e53935;
+      color: #fff;
+    }
+    .btn-safe {
+      background: #43a047;
+      color: #fff;
+    }
+    .btn-info {
+      background: #00897b;
+      color: #fff;
+    }
 
-        .danger {
-            background: #ff2e2e;
-        }
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 4px 0 8px;
+    }
 
-        .safe {
-            background: #0077ff;
-        }
+    .card {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 10px 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      font-size: 13px;
+    }
 
-        .footer {
-            margin-top: 50px;
-            color: #888;
-            font-size: 13px;
-        }
-    </style>
+    .level-list {
+      list-style: none;
+      padding: 0;
+      margin: 4px 0 0;
+    }
+    .level-list li {
+      margin-bottom: 4px;
+    }
+    .level-tag {
+      display: inline-block;
+      min-width: 70px;
+      font-weight: 600;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 18px;
+      font-size: 11px;
+      color: #777;
+    }
+  </style>
 </head>
-
 <body>
-    <div class="app-container">
-        <h1>🚨 SOS RESCUE</h1>
-        <p>ระบบแจ้งเหตุฉุกเฉินสำหรับผู้ประสบภัยน้ำท่วม</p>
+  <div class="header">
+    <h1>SOS RESCUE</h1>
+    <p>ระบบแจ้งเหตุและติดตามตำแหน่งผู้ประสบภัยน้ำท่วม</p>
+  </div>
 
-        <div class="menu">
-            <a href="report.html" class="menu-btn danger">แจ้งเหตุฉุกเฉิน</a>
-            <a href="rescue.html" class="menu-btn safe">เข้าสู่ระบบเจ้าหน้าที่กู้ภัย</a>
-        </div>
+  <div class="container">
 
-        <div class="footer">
-            Powered by Sarayut | SOS Rescue System
-        </div>
+    <!-- เมนูหลัก 3 ปุ่ม -->
+    <div class="menu">
+      <!-- หน้าแจ้งเหตุ / ผู้ประสบภัยใช้กด -->
+      <a href="report.html" class="btn-danger">
+        📢 แจ้งเหตุฉุกเฉิน / แจ้งตำแหน่งผู้ประสบภัย
+      </a>
+
+      <!-- หน้ากู้ภัย ใช้ดูเคสที่ยังไม่ได้ปิด -->
+      <a href="rescue.html" class="btn-safe">
+        🚑 เข้าสู่ระบบเจ้าหน้าที่กู้ภัย (เคสที่ยังไม่ปิด)
+      </a>
+
+      <!-- หน้าประวัติคนที่ช่วยแล้ว -->
+      <a href="history.html" class="btn-info">
+        ✅ ดูผู้ที่ได้รับการช่วยเหลือแล้ว
+      </a>
     </div>
 
-    <!-- โหลด config ของโปรเจ็กต์ (ไฟล์ที่คุณสร้างไว้แล้ว) -->
-    <script src="firebase-config.js"></script>
+    <!-- คำอธิบายระดับกระแสน้ำ -->
+    <div class="section-title">
+      ความหมายของระดับความแรงกระแสน้ำ (1 – 5)
+    </div>
+    <div class="card">
+      <p style="margin-top:0;">
+        เพื่อให้เจ้าหน้าที่ประเมินความเสี่ยงได้เร็วขึ้น ผู้แจ้งเหตุสามารถเลือก
+        <b>ระดับความแรงของกระแสน้ำ</b> ตามนี้:
+      </p>
+      <ul class="level-list">
+        <li>
+          <span class="level-tag">ระดับ 1 :</span>
+          น้ำแทบไม่ไหล / นิ่งเกือบสนิท ไม่มีแรงพัดพา
+        </li>
+        <li>
+          <span class="level-tag">ระดับ 2 :</span>
+          น้ำไหลช้า ระดับเอว–เข่า เดินลุยได้ แต่อาจลื่น
+        </li>
+        <li>
+          <span class="level-tag">ระดับ 3 :</span>
+          น้ำไหลปานกลาง เริ่มมีแรงดัน คนตัวเล็ก เด็ก หรือผู้สูงอายุอาจล้มได้
+        </li>
+        <li>
+          <span class="level-tag">ระดับ 4 :</span>
+          น้ำไหลแรง เดินฝืนลำบาก เสี่ยงถูกพัดล้ม/พัดพา สิ่งของลอยตามน้ำจำนวนมาก
+        </li>
+        <li>
+          <span class="level-tag">ระดับ 5 :</span>
+          น้ำไหลแรงมากและเชี่ยวกราก ระดับอันตรายสูง
+          ยานพาหนะเล็กอาจถูกพัดได้ ต้องการเจ้าหน้าที่เข้าช่วยเหลือโดยด่วน
+        </li>
+      </ul>
+    </div>
 
-    <!-- ใช้ Firebase แบบโมดูล (ไว้ต่อยอดในอนาคต) -->
-    <script type="module">
-        import { initializeApp } 
-            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-
-        import { 
-            getFirestore, 
-            collection, 
-            addDoc 
-        } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-        // ใช้ config จากไฟล์ firebase-config.js
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // ตอนนี้เรายังไม่ได้ใช้ db ที่หน้าแรก
-        // แต่เตรียมไว้เผื่ออนาคตอยากให้หน้าแรกดึงสถิติ / จำนวนเคสขึ้นมาแสดง
-    </script>
+    <div class="footer">
+      Powered by Sarayut | SOS Rescue System
+    </div>
+  </div>
 </body>
 </html>
