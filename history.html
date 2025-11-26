@@ -3,180 +3,422 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>ประวัติเคสที่ได้รับการช่วยเหลือแล้ว - SOS</title>
+  <title>ประวัติผู้ได้รับการช่วยเหลือแล้ว | SOS Rescue</title>
   <style>
-    * { box-sizing:border-box; }
+    * { box-sizing: border-box; }
     body {
-      margin:0;
+      margin: 0;
       font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-      background:#f5f5f5;
+      background: #f5f5f5;
+      color: #222;
     }
+
     .header {
-      background:#00897b;
-      color:#fff;
-      padding:10px 12px;
-      font-size:16px;
+      background: #00897b;
+      color: #fff;
+      padding: 14px 10px;
+      text-align: center;
     }
-    .header small { display:block; font-size:12px; opacity:0.9; }
+    .header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    .header p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      opacity: .95;
+    }
 
     .container {
-      max-width: 960px;
+      max-width: 980px;
       margin: 0 auto;
-      padding: 10px;
-      font-size:14px;
+      padding: 10px 10px 20px;
+    }
+
+    .back-link {
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .back-link a {
+      color: #1565c0;
+      text-decoration: none;
+    }
+
+    .filter-card {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 8px 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .filter-row label {
+      font-size: 12px;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .filter-group {
+      min-width: 120px;
+      flex: 1;
+    }
+    select, input[type="text"] {
+      width: 100%;
+      padding: 6px 7px;
+      font-size: 13px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
     }
 
     table {
-      width:100%;
-      border-collapse:collapse;
-      background:#fff;
-      font-size:13px;
+      width: 100%;
+      border-collapse: collapse;
+      background: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      font-size: 13px;
     }
     th, td {
-      border:1px solid #ddd;
-      padding:4px 6px;
-      vertical-align:top;
+      padding: 6px 6px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+      vertical-align: top;
     }
     th {
-      background:#e0f2f1;
-      text-align:center;
-      white-space:nowrap;
+      background: #eeeeee;
+      font-weight: 600;
+      white-space: nowrap;
     }
-    tr:nth-child(even) { background:#fafafa; }
+    tr:last-child td {
+      border-bottom: none;
+    }
 
-    .status-bar {
-      font-size:12px;
-      margin:6px 0;
-      color:#555;
+    .level-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .level-1 { background: #8bc34a; }
+    .level-2 { background: #4caf50; }
+    .level-3 { background: #ffb300; }
+    .level-4 { background: #fb8c00; }
+    .level-5 { background: #e53935; }
+
+    .btn-map {
+      display: inline-block;
+      padding: 4px 7px;
+      border-radius: 999px;
+      border: none;
+      background: #1976d2;
+      color: #fff;
+      font-size: 11px;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .status-tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: #43a047;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 14px;
+      font-size: 13px;
+      color: #777;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 11px;
+      color: #777;
+    }
+
+    @media (max-width: 720px) {
+      th, td {
+        font-size: 11px;
+        padding: 5px 4px;
+      }
+      .header h1 { font-size: 18px; }
+      .filter-group { min-width: 100px; }
     }
   </style>
 </head>
 <body>
   <div class="header">
-    ✅ ผู้ที่ได้รับการช่วยเหลือแล้ว - SOS<br>
-    <small>ข้อมูลจาก Firestore (collection: <b>cases</b> | status = "closed")</small>
+    <h1>✅ ผู้ที่ได้รับการช่วยเหลือแล้ว</h1>
+    <p>แสดงเฉพาะเคสที่ปิดแล้ว (status = "closed") จากฐานข้อมูล Firestore</p>
   </div>
 
   <div class="container">
-    <div class="status-bar" id="statusBar">กำลังโหลดข้อมูล...</div>
+    <div class="back-link">
+      ⬅️ <a href="index.html">กลับหน้าแรกระบบ SOS</a>
+    </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>ชื่อ</th>
-          <th>เบอร์</th>
-          <th>พื้นที่</th>
-          <th>ระดับน้ำ</th>
-          <th>รายละเอียด</th>
-          <th>พิกัด</th>
-          <th>เวลาที่ช่วยเหลือ</th>
-        </tr>
-      </thead>
-      <tbody id="historyBody">
-        <tr><td colspan="7" style="text-align:center;">ไม่มีข้อมูล</td></tr>
-      </tbody>
-    </table>
+    <!-- กล่องกรองข้อมูล -->
+    <div class="filter-card">
+      <div><strong>ตัวกรองข้อมูล</strong> (ใช้กรองจากข้อมูลที่โหลดมาแล้วบนเครื่อง)</div>
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>จังหวัด</label>
+          <select id="filterProvince">
+            <option value="">ทั้งหมด</option>
+            <!-- จะเติมจากข้อมูลจริงด้วย JavaScript -->
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>อำเภอ</label>
+          <select id="filterDistrict">
+            <option value="">ทั้งหมด</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>ตำบล / เขต / เทศบาล</label>
+          <select id="filterSubdistrict">
+            <option value="">ทั้งหมด</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>ค้นหาชื่อ / เบอร์</label>
+          <input type="text" id="filterText" placeholder="พิมพ์ชื่อหรือเบอร์บางส่วน">
+        </div>
+      </div>
+    </div>
+
+    <!-- ตารางข้อมูล -->
+    <div id="tableWrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>ชื่อ</th>
+            <th>เบอร์</th>
+            <th>พื้นที่</th>
+            <th>ระดับน้ำ</th>
+            <th>รายละเอียด</th>
+            <th>แผนที่</th>
+            <th>สถานะ</th>
+            <th>เวลาแจ้งเหตุ</th>
+          </tr>
+        </thead>
+        <tbody id="caseBody">
+          <tr><td colspan="9" class="empty">กำลังโหลดข้อมูล...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer">
+      Powered by Sarayut | SOS Rescue System
+    </div>
   </div>
 
+  <!-- Firebase config -->
   <script src="firebase-config.js"></script>
+
+  <!-- Firebase & Firestore -->
   <script type="module">
     import { initializeApp } 
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
       getFirestore,
       collection,
-      getDocs,
       query,
       where,
-      orderBy
+      orderBy,
+      getDocs
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    // เริ่มต้น Firebase
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
+    console.log("Firebase initialized (history page)");
 
-    const statusBar = document.getElementById('statusBar');
-    const tbody     = document.getElementById('historyBody');
+    const tbody          = document.getElementById('caseBody');
+    const filterProvince = document.getElementById('filterProvince');
+    const filterDistrict = document.getElementById('filterDistrict');
+    const filterSubdist  = document.getElementById('filterSubdistrict');
+    const filterText     = document.getElementById('filterText');
 
-    function formatDate(ts) {
-      if (!ts || !ts.toDate) return '-';
-      const d = ts.toDate();
-      const y = d.getFullYear() + 543; // แปลงเป็น พ.ศ.
-      const m = String(d.getMonth()+1).padStart(2,'0');
-      const day = String(d.getDate()).padStart(2,'0');
-      const hh = String(d.getHours()).padStart(2,'0');
-      const mm = String(d.getMinutes()).padStart(2,'0');
-      return `${day}/${m}/${y} ${hh}:${mm} น.`;
-    }
+    let allCases = [];   // เก็บข้อมูลทั้งหมดที่โหลดมาจาก Firestore
 
-    async function loadHistory() {
-      statusBar.textContent = 'กำลังโหลดข้อมูลจาก Firestore...';
+    // ฟังก์ชันดึงข้อมูลเคสที่ปิดแล้ว
+    async function loadClosedCases() {
       try {
         const q = query(
           collection(db, 'cases'),
-          where('status', '==', 'closed')
+          where('status', '==', 'closed'),
+          orderBy('createdAt', 'desc')
         );
         const snap = await getDocs(q);
-        const list = [];
-        snap.forEach(docSnap => {
-          const data = docSnap.data();
-          list.push({ id: docSnap.id, ...data });
+
+        allCases = snap.docs.map(doc => {
+          const d = doc.data();
+          return {
+            id: doc.id,
+            ...d
+          };
         });
 
-        // เรียงตาม resolvedAt ถ้ามี ถ้าไม่มีก็ใช้ createdAt
-        list.sort((a, b) => {
-          const ta = (a.resolvedAt || a.createdAt);
-          const tb = (b.resolvedAt || b.createdAt);
-          if (!ta || !tb) return 0;
-          return tb.toDate() - ta.toDate();
-        });
-
-        statusBar.textContent = `พบเคสที่ได้รับการช่วยเหลือแล้วทั้งหมด ${list.length} เคส`;
-
-        tbody.innerHTML = '';
-        if (!list.length) {
-          const tr = document.createElement('tr');
-          const td = document.createElement('td');
-          td.colSpan = 7;
-          td.style.textAlign = 'center';
-          td.textContent = 'ยังไม่มีเคสที่ถูกปิด';
-          tr.appendChild(td);
-          tbody.appendChild(tr);
-          return;
-        }
-
-        list.forEach(c => {
-          const tr = document.createElement('tr');
-          const area = [
-            c.region?.province || '',
-            c.region?.district || '',
-            c.region?.subdistrict || '',
-            c.region?.village || ''
-          ].filter(Boolean).join(' / ');
-
-          const latText = (typeof c.lat === 'number' && typeof c.lng === 'number')
-            ? `${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`
-            : '-';
-
-          const waterText = c.waterLevel ? `ระดับ ${c.waterLevel}` : '-';
-
-          tr.innerHTML = `
-            <td>${c.name || '-'}</td>
-            <td>${c.phone || '-'}</td>
-            <td>${area || '-'}</td>
-            <td style="text-align:center;">${waterText}</td>
-            <td>${c.note || c.address || '-'}</td>
-            <td>${latText}</td>
-            <td>${formatDate(c.resolvedAt || c.createdAt)}</td>
-          `;
-          tbody.appendChild(tr);
-        });
+        console.log("โหลดเคส closed:", allCases.length, "รายการ");
+        buildFilterOptions();
+        renderTable();
       } catch (err) {
-        console.error(err);
-        statusBar.textContent = 'โหลดข้อมูลไม่สำเร็จ โปรดลองใหม่';
+        console.error("โหลดข้อมูลล้มเหลว:", err);
+        tbody.innerHTML = `
+          <tr><td colspan="9" class="empty">
+            โหลดข้อมูลไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง
+          </td></tr>`;
       }
     }
 
-    loadHistory();
+    // เติมตัวเลือกจังหวัด/อำเภอ/ตำบลจากข้อมูลจริง
+    function buildFilterOptions() {
+      const provinces = new Set();
+      const districts = new Set();
+      const subs      = new Set();
+
+      allCases.forEach(c => {
+        const r = c.region || {};
+        if (r.province)    provinces.add(r.province);
+        if (r.district)    districts.add(r.district);
+        if (r.subdistrict) subs.add(r.subdistrict);
+      });
+
+      function fillSelect(selectEl, values) {
+        const current = selectEl.value;
+        selectEl.innerHTML = '<option value="">ทั้งหมด</option>';
+        Array.from(values).sort().forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          selectEl.appendChild(opt);
+        });
+        // ถ้ามีค่าที่เลือกอยู่แล้วพยายามเซตกลับ
+        if (current && Array.from(values).includes(current)) {
+          selectEl.value = current;
+        }
+      }
+
+      fillSelect(filterProvince, provinces);
+      fillSelect(filterDistrict, districts);
+      fillSelect(filterSubdist , subs);
+    }
+
+    function levelBadge(level) {
+      const lv = Number(level) || 0;
+      let cls = 'level-1';
+      let text = `ระดับ ${lv}`;
+
+      if (lv === 1) { cls = 'level-1'; text += ' - น้ำแทบไม่ไหล'; }
+      else if (lv === 2) { cls = 'level-2'; text += ' - น้ำไหลช้า'; }
+      else if (lv === 3) { cls = 'level-3'; text += ' - ไหลปานกลาง'; }
+      else if (lv === 4) { cls = 'level-4'; text += ' - ไหลแรง'; }
+      else if (lv === 5) { cls = 'level-5'; text += ' - ไหลแรงมาก'; }
+
+      return `<span class="level-badge ${cls}">${text}</span>`;
+    }
+
+    function formatRegion(r = {}) {
+      const parts = [];
+      if (r.village)    parts.push(r.village);
+      if (r.subdistrict)parts.push(r.subdistrict);
+      if (r.district)   parts.push(r.district);
+      if (r.province)   parts.push(r.province);
+      return parts.join(' / ') || '-';
+    }
+
+    function formatTime(ts) {
+      if (!ts || !ts.toDate) return '-';
+      const d = ts.toDate();
+      const yyyy = d.getFullYear();
+      const mm   = String(d.getMonth() + 1).padStart(2, '0');
+      const dd   = String(d.getDate()).padStart(2, '0');
+      const hh   = String(d.getHours()).padStart(2, '0');
+      const mi   = String(d.getMinutes()).padStart(2, '0');
+      return `${dd}/${mm}/${yyyy} ${hh}:${mi} น.`;
+    }
+
+    function renderTable() {
+      const p = filterProvince.value;
+      const d = filterDistrict.value;
+      const s = filterSubdist.value;
+      const t = filterText.value.trim().toLowerCase();
+
+      const filtered = allCases.filter((c) => {
+        const r = c.region || {};
+        if (p && r.province !== p) return false;
+        if (d && r.district !== d) return false;
+        if (s && r.subdistrict !== s) return false;
+
+        if (t) {
+          const namePhone = `${c.name || ''} ${c.phone || ''}`.toLowerCase();
+          if (!namePhone.includes(t)) return false;
+        }
+        return true;
+      });
+
+      if (!filtered.length) {
+        tbody.innerHTML = `
+          <tr><td colspan="9" class="empty">
+            ไม่มีข้อมูลผู้ที่ได้รับการช่วยเหลือ (ตามเงื่อนไขที่เลือก)
+          </td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map((c, idx) => {
+        const lat = c.lat;
+        const lng = c.lng;
+        const hasLoc = typeof lat === 'number' && typeof lng === 'number';
+        const mapUrl = hasLoc
+          ? `https://www.google.com/maps?q=${lat},${lng}`
+          : '';
+
+        return `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${c.name || '-'}</td>
+            <td>${c.phone || '-'}</td>
+            <td>${formatRegion(c.region)}</td>
+            <td>${levelBadge(c.waterLevel)}</td>
+            <td>${c.note ? c.note.replace(/\n/g, '<br>') : '-'}</td>
+            <td>
+              ${hasLoc
+                ? `<a class="btn-map" href="${mapUrl}" target="_blank">เปิดแผนที่</a>`
+                : '-'}
+            </td>
+            <td><span class="status-tag">ช่วยแล้ว</span></td>
+            <td>${formatTime(c.createdAt)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Event filter
+    filterProvince.addEventListener('change', renderTable);
+    filterDistrict.addEventListener('change', renderTable);
+    filterSubdist.addEventListener('change', renderTable);
+    filterText.addEventListener('input', () => {
+      // หน่วงนิดเดียวก็ได้ แต่เพื่อให้เรียบง่าย เรียกตรง ๆ เลย
+      renderTable();
+    });
+
+    // เริ่มโหลดข้อมูล
+    loadClosedCases();
   </script>
 </body>
 </html>
