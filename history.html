@@ -58,14 +58,14 @@
       gap: 6px;
       margin-top: 4px;
     }
-    .filter-row label {
-      font-size: 12px;
-      display: block;
-      margin-bottom: 2px;
-    }
     .filter-group {
       min-width: 120px;
       flex: 1;
+    }
+    .filter-card label {
+      font-size: 12px;
+      display: block;
+      margin-bottom: 2px;
     }
     select, input[type="text"] {
       width: 100%;
@@ -172,13 +172,12 @@
 
     <!-- กล่องกรองข้อมูล -->
     <div class="filter-card">
-      <div><strong>ตัวกรองข้อมูล</strong> (ใช้กรองจากข้อมูลที่โหลดมาแล้วบนเครื่อง)</div>
+      <div><strong>ตัวกรองข้อมูล</strong> (กรองจากข้อมูลที่โหลดมาแล้วบนเครื่อง)</div>
       <div class="filter-row">
         <div class="filter-group">
           <label>จังหวัด</label>
           <select id="filterProvince">
             <option value="">ทั้งหมด</option>
-            <!-- จะเติมจากข้อมูลจริงด้วย JavaScript -->
           </select>
         </div>
         <div class="filter-group">
@@ -239,8 +238,7 @@
       collection,
       query,
       where,
-      orderBy,
-      getDocs
+      onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     // เริ่มต้น Firebase
@@ -254,36 +252,30 @@
     const filterSubdist  = document.getElementById('filterSubdistrict');
     const filterText     = document.getElementById('filterText');
 
-    let allCases = [];   // เก็บข้อมูลทั้งหมดที่โหลดมาจาก Firestore
+    let allCases = [];   // ข้อมูลทั้งหมดที่ดึงมาจาก Firestore
 
-    // ฟังก์ชันดึงข้อมูลเคสที่ปิดแล้ว
-    async function loadClosedCases() {
-      try {
-        const q = query(
-          collection(db, 'cases'),
-          where('status', '==', 'closed'),
-          orderBy('createdAt', 'desc')
-        );
-        const snap = await getDocs(q);
+    // ใช้ onSnapshot เพื่ออัปเดตแบบเรียลไทม์
+    function subscribeClosedCases() {
+      const q = query(
+        collection(db, 'cases'),
+        where('status', '==', 'closed')
+      );
 
-        allCases = snap.docs.map(doc => {
-          const d = doc.data();
-          return {
-            id: doc.id,
-            ...d
-          };
-        });
-
-        console.log("โหลดเคส closed:", allCases.length, "รายการ");
+      onSnapshot(q, (snap) => {
+        allCases = snap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        console.log("อัปเดตเคส closed:", allCases.length, "รายการ");
         buildFilterOptions();
         renderTable();
-      } catch (err) {
+      }, (err) => {
         console.error("โหลดข้อมูลล้มเหลว:", err);
         tbody.innerHTML = `
           <tr><td colspan="9" class="empty">
             โหลดข้อมูลไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง
           </td></tr>`;
-      }
+      });
     }
 
     // เติมตัวเลือกจังหวัด/อำเภอ/ตำบลจากข้อมูลจริง
@@ -308,7 +300,6 @@
           opt.textContent = v;
           selectEl.appendChild(opt);
         });
-        // ถ้ามีค่าที่เลือกอยู่แล้วพยายามเซตกลับ
         if (current && Array.from(values).includes(current)) {
           selectEl.value = current;
         }
@@ -408,17 +399,14 @@
       }).join('');
     }
 
-    // Event filter
+    // event filter
     filterProvince.addEventListener('change', renderTable);
     filterDistrict.addEventListener('change', renderTable);
     filterSubdist.addEventListener('change', renderTable);
-    filterText.addEventListener('input', () => {
-      // หน่วงนิดเดียวก็ได้ แต่เพื่อให้เรียบง่าย เรียกตรง ๆ เลย
-      renderTable();
-    });
+    filterText.addEventListener('input', renderTable);
 
-    // เริ่มโหลดข้อมูล
-    loadClosedCases();
+    // เริ่ม subscribe ข้อมูลแบบเรียลไทม์
+    subscribeClosedCases();
   </script>
 </body>
 </html>
