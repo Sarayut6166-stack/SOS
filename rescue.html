@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ระบบหน่วยกู้ภัย | SOS Rescue</title>
+
   <style>
     * { box-sizing: border-box; }
     body {
@@ -32,215 +33,227 @@
     .container {
       max-width: 1100px;
       margin: 0 auto;
-      padding: 10px 10px 24px;
+      padding: 10px 10px 40px;
     }
 
     .top-links {
       display: flex;
-      flex-wrap: wrap;
       justify-content: space-between;
-      gap: 8px;
+      flex-wrap: wrap;
       font-size: 13px;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     .top-links a {
-      color: #1565c0;
       text-decoration: none;
+      color: #0d47a1;
     }
 
+    /* ฟิลเตอร์ */
     .filter-card, .legend-card {
-      background: #ffffff;
+      background: #fff;
+      padding: 10px;
       border-radius: 8px;
-      padding: 8px 10px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-      margin-bottom: 10px;
-      font-size: 13px;
-    }
-    .filter-card strong {
-      font-size: 13px;
+      margin-bottom: 12px;
+      box-shadow: 0px 1px 4px rgba(0,0,0,0.1);
     }
     .filter-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 4px;
+      gap: 8px;
     }
     .filter-group {
       flex: 1;
-      min-width: 120px;
+      min-width: 130px;
     }
-    .filter-card label {
-      font-size: 12px;
-      display: block;
-      margin-bottom: 2px;
-    }
+    label { font-size: 12px; margin-bottom: 3px; display: block; }
     select, input[type="text"] {
       width: 100%;
-      padding: 6px 7px;
-      font-size: 13px;
+      padding: 6px;
       border-radius: 6px;
       border: 1px solid #ccc;
-    }
-
-    .legend-title {
-      font-weight: 600;
-      margin-bottom: 4px;
       font-size: 13px;
     }
-    .legend-list {
-      margin: 0;
-      padding-left: 18px;
-      font-size: 12px;
-      color: #444;
-    }
 
+    /* ตาราง */
     table {
       width: 100%;
       border-collapse: collapse;
-      background: #ffffff;
+      background: #fff;
       border-radius: 8px;
       overflow: hidden;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
       font-size: 13px;
+      box-shadow: 0px 1px 4px rgba(0,0,0,0.2);
     }
     th, td {
-      padding: 6px 6px;
+      padding: 6px 8px;
       border-bottom: 1px solid #eee;
-      text-align: left;
       vertical-align: top;
     }
     th {
       background: #e3f2fd;
-      font-weight: 600;
       white-space: nowrap;
-    }
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    .level-badge {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 999px;
-      font-size: 11px;
       font-weight: 600;
-      color: #fff;
     }
-    .level-1 { background: #8bc34a; }
-    .level-2 { background: #4caf50; }
-    .level-3 { background: #ffb300; }
-    .level-4 { background: #fb8c00; }
-    .level-5 { background: #e53935; }
+    tr:last-child td { border-bottom: none; }
 
     .btn-map, .btn-finish {
       display: inline-block;
-      padding: 4px 8px;
-      border-radius: 999px;
-      border: none;
+      padding: 5px 8px;
+      border-radius: 6px;
       font-size: 11px;
-      cursor: pointer;
       text-decoration: none;
-      white-space: nowrap;
-      margin-bottom: 2px;
+      margin-bottom: 4px;
+      color: white;
     }
-    .btn-map {
-      background: #1565c0;
-      color: #fff;
-    }
-    .btn-finish {
-      background: #2e7d32;
-      color: #fff;
-      margin-top: 4px;
-    }
+
+    .btn-map { background: #1565c0; }
+    .btn-finish { background: #2e7d32; margin-top: 4px; }
 
     .status-tag {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 999px;
-      font-size: 11px;
       background: #ef6c00;
-      color: #fff;
-      font-weight: 600;
-    }
-
-    .empty {
-      text-align: center;
-      padding: 14px;
-      font-size: 13px;
-      color: #777;
-    }
-
-    .footer {
-      text-align: center;
-      margin-top: 12px;
+      color: white;
       font-size: 11px;
-      color: #777;
+      padding: 2px 8px;
+      border-radius: 999px;
+      display: inline-block;
     }
 
-    @media (max-width: 720px) {
-      th, td {
-        font-size: 11px;
-        padding: 5px 4px;
-      }
-      .header h1 { font-size: 18px; }
-      .filter-group { min-width: 100px; }
+    .level-badge {
+      padding: 3px 6px;
+      border-radius: 999px;
+      font-weight: 600;
+      color: #fff;
+      font-size: 11px;
     }
+    .lv1 { background: #8bc34a; }
+    .lv2 { background: #4caf50; }
+    .lv3 { background: #ffb300; }
+    .lv4 { background: #fb8c00; }
+    .lv5 { background: #e53935; }
+
+    .empty { text-align: center; padding: 12px; color: #777; }
+
+    /* Popup Maps.me */
+    #mapsmePopup {
+      display:none;
+      position:fixed;
+      left:0; top:0; right:0; bottom:0;
+      background:rgba(0,0,0,0.6);
+      z-index:9999;
+      backdrop-filter:blur(2px);
+    }
+    #mapsmeBox {
+      background:#fff;
+      width:85%;
+      max-width:350px;
+      padding:16px;
+      border-radius:12px;
+      text-align:center;
+      margin:120px auto 0;
+      box-shadow:0 3px 10px rgba(0,0,0,.4);
+    }
+    #mapsmeBox h3 { margin:0 0 10px; }
+    #mapsmeBox p { font-size:14px; color:#444; }
+    .popup-btn {
+      margin-top:10px;
+      background:#2e7d32;
+      padding:10px;
+      border-radius:8px;
+      color:#fff;
+      text-decoration:none;
+      display:block;
+    }
+    .popup-close {
+      background:#555 !important;
+      margin-top:8px;
+    }
+
   </style>
 </head>
 <body>
+
+  <div id="mapsmePopup">
+    <div id="mapsmeBox">
+      <h3>📌 ขอแนะนำสำหรับ iPhone (iOS)</h3>
+      <p>
+        เพื่อให้เจ้าหน้าที่สามารถดูแผนที่และใช้ GPS ได้แม้ไม่มีอินเทอร์เน็ต<br>
+        แนะนำให้ติดตั้งแอป <b>Maps.me</b> (รองรับออฟไลน์เต็มรูปแบบ)
+      </p>
+
+      <a class="popup-btn"
+         href="https://apps.apple.com/us/app/maps-me-offline-maps-gps-nav/id510623322"
+         target="_blank">📥 ดาวน์โหลด Maps.me</a>
+
+      <a class="popup-btn popup-close" onclick="closePopup()">ปิด</a>
+    </div>
+  </div>
+
+  <script>
+    function isIOS() {
+      return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }
+
+    function closePopup() {
+      document.getElementById("mapsmePopup").style.display = "none";
+      localStorage.setItem("mapsmeSeen", Date.now() + (24 * 60 * 60 * 1000));
+    }
+
+    window.addEventListener("load", () => {
+      if (!isIOS()) return;
+      const seen = localStorage.getItem("mapsmeSeen");
+      if (seen && Number(seen) > Date.now()) return;
+      document.getElementById("mapsmePopup").style.display = "block";
+    });
+  </script>
+
   <div class="header">
-    <h1>🚑 ระบบหน่วยกู้ภัย - SOS</h1>
-    <p>แสดงเฉพาะเคสที่ยังไม่ได้ปิด (status = "open") จากฐานข้อมูล Firestore</p>
+    <h1>🚑 ระบบหน่วยกู้ภัย SOS</h1>
+    <p>แสดงเฉพาะเคสที่กำลังรอรับการช่วยเหลือ</p>
   </div>
 
   <div class="container">
+
     <div class="top-links">
-      <div>⬅️ <a href="index.html">กลับหน้าแรกระบบ SOS</a></div>
-      <div>✅ <a href="history.html">ดูประวัติผู้ได้รับการช่วยเหลือแล้ว</a></div>
+      <a href="index.html">⬅️ กลับหน้าแรก</a>
+      <a href="history.html">✔ ผู้ที่ได้รับการช่วยแล้ว</a>
     </div>
 
-    <!-- การอธิบายระดับความแรงกระแสน้ำ -->
+    <!-- คำอธิบายระดับน้ำ -->
     <div class="legend-card">
-      <div class="legend-title">ความหมายระดับความแรงของกระแสน้ำ</div>
-      <ul class="legend-list">
-        <li><strong>ระดับ 1</strong> – น้ำแทบไม่ไหล เดินลุยได้สบาย</li>
-        <li><strong>ระดับ 2</strong> – น้ำไหลช้า รถเล็กยังพอผ่านได้</li>
-        <li><strong>ระดับ 3</strong> – น้ำไหลปานกลาง เริ่มมีแรงดัน ระวังเด็กและผู้สูงอายุ</li>
-        <li><strong>ระดับ 4</strong> – น้ำไหลแรง รถผ่านยาก เสี่ยงถูกพัดล้ม</li>
-        <li><strong>ระดับ 5</strong> – น้ำไหลแรงมาก อันตรายสูง เสี่ยงชีวิต ห้ามลงน้ำเอง</li>
+      <b>ความหมายระดับความแรงกระแสน้ำ</b>
+      <ul style="font-size:12px; padding-left:16px;">
+        <li><b>ระดับ 1</b> – น้ำแทบไม่ไหล</li>
+        <li><b>ระดับ 2</b> – น้ำไหลช้า</li>
+        <li><b>ระดับ 3</b> – น้ำไหลปานกลาง</li>
+        <li><b>ระดับ 4</b> – น้ำไหลแรง</li>
+        <li><b>ระดับ 5</b> – น้ำไหลแรงมาก อันตรายสูง</li>
       </ul>
     </div>
 
-    <!-- กล่องกรองข้อมูล -->
+    <!-- ฟิลเตอร์ -->
     <div class="filter-card">
-      <div><strong>ตัวกรองข้อมูล (เฉพาะเคสที่ยังเปิดอยู่)</strong></div>
+      <b>ตัวกรองข้อมูล</b>
       <div class="filter-row">
         <div class="filter-group">
           <label>จังหวัด</label>
-          <select id="filterProvince">
-            <option value="">ทั้งหมด</option>
-          </select>
+          <select id="filterProvince"><option value="">ทั้งหมด</option></select>
         </div>
         <div class="filter-group">
           <label>อำเภอ</label>
-          <select id="filterDistrict">
-            <option value="">ทั้งหมด</option>
-          </select>
+          <select id="filterDistrict"><option value="">ทั้งหมด</option></select>
         </div>
         <div class="filter-group">
-          <label>ตำบล / เขต / เทศบาล</label>
-          <select id="filterSubdistrict">
-            <option value="">ทั้งหมด</option>
-          </select>
+          <label>ตำบล</label>
+          <select id="filterSubdistrict"><option value="">ทั้งหมด</option></select>
         </div>
         <div class="filter-group">
-          <label>ค้นหาชื่อ / เบอร์</label>
-          <input type="text" id="filterText" placeholder="พิมพ์ชื่อหรือเบอร์บางส่วน">
+          <label>ชื่อ/เบอร์</label>
+          <input type="text" id="filterText" placeholder="ค้นหา..." />
         </div>
       </div>
     </div>
 
-    <!-- ตารางข้อมูล -->
+    <!-- ตาราง -->
     <table>
       <thead>
         <tr>
@@ -250,7 +263,7 @@
           <th>พื้นที่</th>
           <th>ระดับน้ำ</th>
           <th>รายละเอียด</th>
-          <th>แผนที่ / การจัดการ</th>
+          <th>แผนที่</th>
           <th>สถานะ</th>
         </tr>
       </thead>
@@ -259,17 +272,13 @@
       </tbody>
     </table>
 
-    <div class="footer">
-      Powered by Sarayut | SOS Rescue System
-    </div>
   </div>
 
-  <!-- Firebase config -->
   <script src="firebase-config.js"></script>
 
-  <!-- Firebase แบบโมดูล -->
+  <!-- Firebase -->
   <script type="module">
-    import { initializeApp } 
+    import { initializeApp }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
       getFirestore,
@@ -282,189 +291,150 @@
       serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // เริ่มต้น Firebase
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
-    console.log("Firebase initialized (rescue page)");
 
-    const tbody          = document.getElementById('caseBody');
-    const filterProvince = document.getElementById('filterProvince');
-    const filterDistrict = document.getElementById('filterDistrict');
-    const filterSubdist  = document.getElementById('filterSubdistrict');
-    const filterText     = document.getElementById('filterText');
+    const tbody = document.getElementById("caseBody");
+
+    const pFilter = document.getElementById("filterProvince");
+    const dFilter = document.getElementById("filterDistrict");
+    const sFilter = document.getElementById("filterSubdistrict");
+    const tFilter = document.getElementById("filterText");
 
     let allCases = [];
 
-    // subscribe เคสที่ status = open แบบเรียลไทม์
-    function subscribeOpenCases() {
+    function subscribeData() {
       const q = query(
-        collection(db, 'cases'),
-        where('status', '==', 'open')
+        collection(db, "cases"),
+        where("status", "==", "open")
       );
 
-      onSnapshot(q, (snap) => {
-        allCases = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log("อัปเดตเคส open:", allCases.length, "รายการ");
-        buildFilterOptions();
+      onSnapshot(q, snap => {
+        allCases = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        buildFilters();
         renderTable();
-      }, (err) => {
-        console.error("โหลดข้อมูลล้มเหลว:", err);
-        tbody.innerHTML = `
-          <tr><td colspan="8" class="empty">
-            โหลดข้อมูลไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง
-          </td></tr>`;
       });
     }
 
-    // สร้างตัวเลือกจังหวัด/อำเภอ/ตำบล จากข้อมูลจริง
-    function buildFilterOptions() {
-      const provinces = new Set();
-      const districts = new Set();
-      const subs      = new Set();
+    function buildFilters() {
+      const pSet = new Set(), dSet = new Set(), sSet = new Set();
 
       allCases.forEach(c => {
         const r = c.region || {};
-        if (r.province)    provinces.add(r.province);
-        if (r.district)    districts.add(r.district);
-        if (r.subdistrict) subs.add(r.subdistrict);
+        if (r.province) pSet.add(r.province);
+        if (r.district) dSet.add(r.district);
+        if (r.subdistrict) sSet.add(r.subdistrict);
       });
 
-      function fillSelect(selectEl, values) {
-        const current = selectEl.value;
-        selectEl.innerHTML = '<option value="">ทั้งหมด</option>';
-        Array.from(values).sort().forEach(v => {
-          const opt = document.createElement('option');
-          opt.value = v;
-          opt.textContent = v;
-          selectEl.appendChild(opt);
+      function fill(sel, set) {
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">ทั้งหมด</option>';
+        [...set].sort().forEach(v => {
+          sel.innerHTML += `<option>${v}</option>`;
         });
-        if (current && Array.from(values).includes(current)) {
-          selectEl.value = current;
-        }
+        if (cur && [...set].includes(cur)) sel.value = cur;
       }
 
-      fillSelect(filterProvince, provinces);
-      fillSelect(filterDistrict, districts);
-      fillSelect(filterSubdist , subs);
+      fill(pFilter, pSet);
+      fill(dFilter, dSet);
+      fill(sFilter, sSet);
     }
 
-    function levelBadge(level) {
-      const lv = Number(level) || 0;
-      let cls = 'level-1';
-      let text = `ระดับ ${lv}`;
-
-      if (lv === 1) { cls = 'level-1'; text += ' - น้ำแทบไม่ไหล'; }
-      else if (lv === 2) { cls = 'level-2'; text += ' - น้ำไหลช้า'; }
-      else if (lv === 3) { cls = 'level-3'; text += ' - ไหลปานกลาง'; }
-      else if (lv === 4) { cls = 'level-4'; text += ' - ไหลแรง'; }
-      else if (lv === 5) { cls = 'level-5'; text += ' - ไหลแรงมาก'; }
-
-      return `<span class="level-badge ${cls}">${text}</span>`;
+    function levelBadge(lv) {
+      lv = Number(lv);
+      if (lv === 1) return `<span class="level-badge lv1">ระดับ 1</span>`;
+      if (lv === 2) return `<span class="level-badge lv2">ระดับ 2</span>`;
+      if (lv === 3) return `<span class="level-badge lv3">ระดับ 3</span>`;
+      if (lv === 4) return `<span class="level-badge lv4">ระดับ 4</span>`;
+      if (lv === 5) return `<span class="level-badge lv5">ระดับ 5</span>`;
+      return '-';
     }
 
-    function formatRegion(r = {}) {
-      const parts = [];
-      if (r.village)    parts.push(r.village);
-      if (r.subdistrict)parts.push(r.subdistrict);
-      if (r.district)   parts.push(r.district);
-      if (r.province)   parts.push(r.province);
-      return parts.join(' / ') || '-';
+    function showRegion(r) {
+      if (!r) return "-";
+      return [
+        r.village || "",
+        r.subdistrict || "",
+        r.district || "",
+        r.province || ""
+      ].filter(Boolean).join(" / ");
     }
 
     function renderTable() {
-      const p = filterProvince.value;
-      const d = filterDistrict.value;
-      const s = filterSubdist.value;
-      const t = filterText.value.trim().toLowerCase();
+      const p = pFilter.value;
+      const d = dFilter.value;
+      const s = sFilter.value;
+      const t = tFilter.value.trim().toLowerCase();
 
-      const filtered = allCases.filter((c) => {
+      const data = allCases.filter(c => {
         const r = c.region || {};
         if (p && r.province !== p) return false;
         if (d && r.district !== d) return false;
         if (s && r.subdistrict !== s) return false;
 
         if (t) {
-          const namePhone = `${c.name || ''} ${c.phone || ''}`.toLowerCase();
-          if (!namePhone.includes(t)) return false;
+          const txt = `${c.name || ""} ${c.phone || ""}`.toLowerCase();
+          if (!txt.includes(t)) return false;
         }
         return true;
       });
 
-      if (!filtered.length) {
-        tbody.innerHTML = `
-          <tr><td colspan="8" class="empty">
-            ยังไม่มีเคสที่รอการช่วยเหลือตามเงื่อนไขที่เลือก
-          </td></tr>`;
+      if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty">ไม่พบข้อมูล</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = filtered.map((c, idx) => {
-        const lat = c.lat;
-        const lng = c.lng;
-        const hasLoc = typeof lat === "number" && typeof lng === "number";
+      tbody.innerHTML = data.map((c, i) => {
+        const lat = c.lat, lng = c.lng;
+        let maps = "-";
 
-        let mapLinks = "-";
-        if (hasLoc) {
-          const gmapsUrl   = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-          const appleUrl   = `http://maps.apple.com/?ll=${lat},${lng}`;
-          const osmandUrl  = `https://osmand.net/map?pin=${lat},${lng}#17/${lat}/${lng}`;
-          const organicUrl = `https://omaps.app/map?v=1&ll=${lat},${lng}`;
-          const mapsmeUrl  = `mapsme://map?ll=${lat},${lng}&n=ตำแหน่งผู้ประสบภัย`;
+        if (typeof lat === "number" && typeof lng === "number") {
 
-          mapLinks = `
-            <a class="btn-map" href="${gmapsUrl}" target="_blank">Google</a><br>
-            <a class="btn-map" href="${appleUrl}" target="_blank">Apple</a><br>
-            <a class="btn-map" href="${mapsmeUrl}">Maps.me</a><br>
-            <a class="btn-map" href="${osmandUrl}" target="_blank">OsmAnd</a><br>
-            <a class="btn-map" href="${organicUrl}" target="_blank">Organic</a>
+          const gUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+          const mUrl = `mapsme://map?ll=${lat},${lng}&n=ตำแหน่งผู้ประสบภัย`;
+
+          maps = `
+            <a class="btn-map" href="${gUrl}" target="_blank">Google Maps</a><br>
+            <a class="btn-map" href="${mUrl}">Maps.me</a>
           `;
         }
 
         return `
           <tr>
-            <td>${idx + 1}</td>
-            <td>${c.name || '-'}</td>
-            <td>${c.phone || '-'}</td>
-            <td>${formatRegion(c.region)}</td>
+            <td>${i+1}</td>
+            <td>${c.name || "-"}</td>
+            <td>${c.phone || "-"}</td>
+            <td>${showRegion(c.region)}</td>
             <td>${levelBadge(c.waterLevel)}</td>
-            <td>${c.note ? c.note.replace(/\n/g, '<br>') : '-'}</td>
+            <td>${c.note || "-"}</td>
             <td>
-              ${mapLinks}<br>
-              <button class="btn-finish" onclick="closeCase('${c.id}')">
-                ✔ ช่วยแล้ว
-              </button>
+              ${maps}<br>
+              <button class="btn-finish" onclick="closeCase('${c.id}')">✔ ช่วยแล้ว</button>
             </td>
             <td><span class="status-tag">รอช่วยเหลือ</span></td>
           </tr>
         `;
-      }).join('');
+      }).join("");
     }
 
-    // ฟังก์ชันปิดเคส ทำให้ใช้ได้จาก onclick
-    window.closeCase = async function (caseId) {
-      if (!confirm("ยืนยันการปิดเคสนี้หรือไม่?")) return;
+    window.closeCase = async function (id) {
+      if (!confirm("ยืนยันว่าช่วยเคสนี้แล้ว?")) return;
 
-      try {
-        await updateDoc(doc(db, "cases", caseId), {
-          status: "closed",
-          closedAt: serverTimestamp()
-        });
-        alert("บันทึกว่า 'ช่วยแล้ว' สำเร็จ");
-        // onSnapshot จะอัปเดตตารางให้เอง
-      } catch (err) {
-        console.error(err);
-        alert("เกิดข้อผิดพลาด ไม่สามารถปิดเคสได้");
-      }
+      await updateDoc(doc(db, "cases", id), {
+        status: "closed",
+        closedAt: serverTimestamp()
+      });
+
+      alert("บันทึกสำเร็จ");
     };
 
-    // event filter
-    filterProvince.addEventListener('change', renderTable);
-    filterDistrict.addEventListener('change', renderTable);
-    filterSubdist.addEventListener('change', renderTable);
-    filterText.addEventListener('input', renderTable);
+    pFilter.onchange = renderTable;
+    dFilter.onchange = renderTable;
+    sFilter.onchange = renderTable;
+    tFilter.oninput = renderTable;
 
-    // เริ่ม subscribe ข้อมูล
-    subscribeOpenCases();
+    subscribeData();
   </script>
+
 </body>
 </html>
