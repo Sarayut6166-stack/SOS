@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>แจ้งเหตุผู้ประสบภัยน้ำท่วม</title>
+  <title>แจ้งเหตุผู้ประสบภัยน้ำท่วม | SOS Rescue</title>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -22,7 +22,7 @@
       margin: auto;
       padding: 12px;
     }
-    h2 { text-align:center; margin: 10px 0; }
+    h2 { text-align:center; margin: 12px 0; }
     label { margin-top:10px; display:block; font-size:14px; }
     input, select, textarea {
       width:100%; padding:8px; border-radius:8px;
@@ -33,8 +33,11 @@
       background:#d32f2f; color:#fff; border:none;
       border-radius:8px; font-size:16px; font-weight:bold;
     }
-    #status { margin-top:8px; font-size:14px; color:#333; }
-    .hint { font-size:12px; color:#666; }
+    #status { margin-top:10px; font-size:14px; }
+    .info-box {
+      background:#fff9c4; padding:10px; border-radius:8px; font-size:13px;
+      border:1px solid #f0e68c; margin-bottom:12px;
+    }
   </style>
 </head>
 <body>
@@ -42,17 +45,26 @@
 <div id="map"></div>
 
 <div class="container">
+
+  <!-- ข้อความสำหรับผู้ใช้งาน -->
+  <div class="info-box">
+    <b>คำแนะนำ:</b><br>
+    - โปรดกรอกข้อมูลตามความจริง เพื่อให้เจ้าหน้าที่ช่วยเหลือได้รวดเร็ว<br>
+    - หากผู้ประสบภัยไม่สามารถแจ้งเองได้ ญาติหรือผู้พบเห็นสามารถแจ้งแทนได้<br>
+    - ตรวจสอบเบอร์โทรและตำแหน่ง GPS ให้ถูกต้องก่อนส่งข้อมูล
+  </div>
+
   <h2>📍 แจ้งตำแหน่งผู้ประสบภัย</h2>
 
   <form id="reportForm">
 
-    <label>ชื่อผู้แจ้ง</label>
+    <label>ชื่อผู้แจ้ง / ผู้ประสบภัย</label>
     <input name="name" required>
 
     <label>เบอร์โทรติดต่อ</label>
     <input name="phone" type="tel" required>
 
-    <label>รายละเอียดตำแหน่งเพิ่มเติม</label>
+    <label>รายละเอียดเพิ่มเติม</label>
     <textarea name="note" rows="2"></textarea>
 
     <label>จังหวัด</label>
@@ -61,17 +73,17 @@
     </select>
 
     <label>อำเภอ</label>
-    <select id="districtSelect" name="district" disabled required>
+    <select id="districtSelect" name="district" required disabled>
       <option value="">เลือกจังหวัดก่อน</option>
     </select>
 
     <label>ตำบล</label>
-    <select id="subdistrictSelect" name="subdistrict" disabled required>
+    <select id="subdistrictSelect" name="subdistrict" required disabled>
       <option value="">เลือกอำเภอก่อน</option>
     </select>
 
-    <label>หมู่บ้าน / ชุมชน</label>
-    <input name="village" placeholder="เช่น หมู่ 1, บ้านโคก">
+    <label>หมู่บ้าน / ชุมชน (พิมพ์ได้)</label>
+    <input name="village" placeholder="เช่น หมู่ 5 บ้านทุ่งโคก">
 
     <label>ความแรงของกระแสน้ำ</label>
     <select name="waterLevel" required>
@@ -80,10 +92,8 @@
       <option value="2">ระดับ 2 - น้ำไหลช้า</option>
       <option value="3">ระดับ 3 - น้ำไหลปานกลาง</option>
       <option value="4">ระดับ 4 - น้ำไหลแรง</option>
-      <option value="5">ระดับ 5 - น้ำไหลแรงมาก อันตรายสูง</option>
+      <option value="5">ระดับ 5 - น้ำไหลแรงมาก</option>
     </select>
-
-    <p class="hint">ระบบจะใช้พิกัด GPS หรือหมุดที่คุณปักบนแผนที่</p>
 
     <button type="submit">ส่งข้อมูลผู้ประสบภัย</button>
   </form>
@@ -95,30 +105,41 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="firebase-config.js"></script>
 
-<!-- Firebase v10 -->
 <script type="module">
-  import { initializeApp } 
+
+  import { initializeApp }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
-    getFirestore,
-    collection,
-    addDoc,
-    deleteDoc,
-    getDocs,
-    query,
-    where,
-    serverTimestamp,
-    doc
+    getFirestore, collection, addDoc,
+    deleteDoc, getDocs, query, where,
+    serverTimestamp, doc
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
 
-  // ---------- MAP ----------
-  const map = L.map('map').setView([7.0, 100.5], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  // ▲▲▲ LEAFLET MAP + SATELLITE VIEW ▲▲▲
 
-  let marker = L.marker([7.0, 100.5], { draggable:true }).addTo(map);
+  const map = L.map('map').setView([7.0, 100.5], 12);
+
+  const normalMap = L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    { maxZoom: 19 }
+  );
+
+  const satelliteMap = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 19 }
+  );
+
+  normalMap.addTo(map);
+
+  L.control.layers({
+    "🗺 แผนที่ถนน": normalMap,
+    "🛰 แผนที่ดาวเทียม": satelliteMap
+  }).addTo(map);
+
+  let marker = L.marker([7.0, 100.5], { draggable: true }).addTo(map);
 
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(pos => {
@@ -131,17 +152,16 @@
 
   map.on("click", e => marker.setLatLng(e.latlng));
 
-  // ---------- LOAD THAI PROVINCE DATA ----------
+  // ▲▲▲ โหลดข้อมูลจังหวัด อำเภอ ตำบล ▲▲▲
+
   const P_URL = "https://raw.githubusercontent.com/kongvut/thai-province-data/refs/heads/master/api/latest/province.json";
   const D_URL = "https://raw.githubusercontent.com/kongvut/thai-province-data/refs/heads/master/api/latest/district.json";
   const S_URL = "https://raw.githubusercontent.com/kongvut/thai-province-data/refs/heads/master/api/latest/sub_district.json";
 
-  let provinces = [];
-  let districts = [];
-  let subdistricts = [];
+  let provinces = [], districts = [], subdistricts = [];
 
-  const provinceSelect = document.getElementById("provinceSelect");
-  const districtSelect = document.getElementById("districtSelect");
+  const provinceSelect   = document.getElementById("provinceSelect");
+  const districtSelect   = document.getElementById("districtSelect");
   const subdistrictSelect = document.getElementById("subdistrictSelect");
 
   async function loadThaiData() {
@@ -158,25 +178,24 @@
   provinceSelect.addEventListener("change", () => {
     const p = provinces.find(x => x.name_th === provinceSelect.value);
     districtSelect.disabled = false;
-
-    const d = districts.filter(x => x.province_id === p.id);
     districtSelect.innerHTML = '<option value="">เลือกอำเภอ</option>';
-    d.forEach(v => districtSelect.innerHTML += `<option>${v.name_th}</option>`);
+    districts.filter(x => x.province_id === p.id)
+      .forEach(d => districtSelect.innerHTML += `<option>${d.name_th}</option>`);
   });
 
   districtSelect.addEventListener("change", () => {
     const d = districts.find(x => x.name_th === districtSelect.value);
     subdistrictSelect.disabled = false;
-
-    const s = subdistricts.filter(x => x.district_id === d.id);
     subdistrictSelect.innerHTML = '<option value="">เลือกตำบล</option>';
-    s.forEach(v => subdistrictSelect.innerHTML += `<option>${v.name_th}</option>`);
+    subdistricts.filter(x => x.district_id === d.id)
+      .forEach(s => subdistrictSelect.innerHTML += `<option>${s.name_th}</option>`);
   });
 
   loadThaiData();
 
-  // ---------- FORM SUBMIT ----------
-  const form = document.getElementById("reportForm");
+  // ▲▲▲ SUBMIT FORM ◀ ป้องกันเบอร์ซ้ำ + ลบข้อมูลเก่า ▲▲▲
+
+  const form     = document.getElementById("reportForm");
   const statusEl = document.getElementById("status");
 
   form.addEventListener("submit", async (e) => {
@@ -186,21 +205,19 @@
     statusEl.textContent = "กำลังตรวจสอบข้อมูลเก่า...";
 
     try {
-
-      // 1. ค้นหาว่ามีเคสเบอร์นี้ไหม
+      // 1) ค้นหาข้อมูลเก่า
       const q = query(collection(db, "cases"), where("phone", "==", phoneInput));
       const snap = await getDocs(q);
 
-      // 2. ถ้ามีเคสเก่า → ลบทิ้งก่อน
+      // 2) ลบข้อมูลเก่าถ้าเจอ
       if (!snap.empty) {
         for (const d of snap.docs) {
           await deleteDoc(doc(db, "cases", d.id));
         }
       }
 
-      // 3. เพิ่มข้อมูลใหม่
+      // 3) เพิ่มข้อมูลใหม่
       const latlng = marker.getLatLng();
-
       const data = {
         name : form.name.value.trim(),
         phone: phoneInput,
@@ -229,6 +246,7 @@
       statusEl.textContent = "❌ เกิดข้อผิดพลาด ไม่สามารถส่งข้อมูลได้";
     }
   });
+
 </script>
 
 </body>
