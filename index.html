@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOS Rescue System</title>
-    <link rel="stylesheet" href="style.css">
     <style>
         body {
             margin: 0;
             padding: 0;
             background: #f5f5f5;
-            font-family: 'Prompt', sans-serif;
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
         }
 
         .app-container {
@@ -65,7 +64,6 @@
             color: #888;
             font-size: 13px;
         }
-
     </style>
 </head>
 
@@ -83,5 +81,27 @@
             Powered by Sarayut | SOS Rescue System
         </div>
     </div>
+
+    <!-- โหลด config ของโปรเจ็กต์ (ไฟล์ที่คุณสร้างไว้แล้ว) -->
+    <script src="firebase-config.js"></script>
+
+    <!-- ใช้ Firebase แบบโมดูล (ไว้ต่อยอดในอนาคต) -->
+    <script type="module">
+        import { initializeApp } 
+            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc 
+        } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        // ใช้ config จากไฟล์ firebase-config.js
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // ตอนนี้เรายังไม่ได้ใช้ db ที่หน้าแรก
+        // แต่เตรียมไว้เผื่ออนาคตอยากให้หน้าแรกดึงสถิติ / จำนวนเคสขึ้นมาแสดง
+    </script>
 </body>
 </html>
