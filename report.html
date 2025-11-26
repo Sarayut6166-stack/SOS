@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>แจ้งเหตุผู้ประสบภัยน้ำท่วม</title>
 
-  <!-- Leaflet map -->
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
   <style>
-    * { box-sizing:border-box; }
+    * { box-sizing: border-box; }
     body {
-      margin:0;
+      margin: 0;
       font-family: system-ui, -apple-system, sans-serif;
       background:#f5f5f5;
     }
@@ -21,309 +22,188 @@
       margin: auto;
       padding: 12px;
     }
-    h2 {
-      margin: 8px 0;
-      text-align:center;
-      font-size:18px;
+    h2 { text-align:center; margin: 10px 0; }
+    label { margin-top:10px; display:block; font-size:14px; }
+    input, select, textarea {
+      width:100%; padding:8px; border-radius:8px;
+      border:1px solid #ccc; margin-top:4px;
     }
-    p { font-size:14px; color:#555; }
-
-    label {
-      display:block;
-      margin-top:8px;
-      font-size:14px;
-    }
-    input, textarea, select, button {
-      width: 100%;
-      margin-top:4px;
-      padding: 8px;
-      font-size: 15px;
-      box-sizing: border-box;
-      border-radius:8px;
-      border:1px solid #ccc;
-    }
-    textarea { resize: vertical; }
-
     button {
-      margin-top:14px;
-      background:#e53935;
-      color:#fff;
-      border:none;
-      font-weight:600;
-      box-shadow:0 3px 8px rgba(0,0,0,0.2);
+      width:100%; padding:12px; margin-top:16px;
+      background:#d32f2f; color:#fff; border:none;
+      border-radius:8px; font-size:16px; font-weight:bold;
     }
-
-    #status { font-size:13px; margin-top:6px; }
-    .hint { font-size:12px; color:#777; }
-    .small { font-size:12px; color:#777; margin-top:2px; }
+    #status { margin-top:8px; font-size:14px; color:#333; }
+    .hint { font-size:12px; color:#666; }
   </style>
 </head>
 <body>
-  <!-- แผนที่ให้ผู้ใช้ปักหมุด -->
-  <div id="map"></div>
 
-  <div class="container">
-    <h2>📍 แจ้งตำแหน่งผู้ประสบภัย</h2>
-    <p>
-      เลื่อนหมุดบนแผนที่ให้ตรงจุดที่ต้องการความช่วยเหลือ<br>
-      หรือใช้ GPS จากมือถือ (ระบบจะพยายามระบุตำแหน่งให้อัตโนมัติ)
-    </p>
+<div id="map"></div>
 
-    <form id="reportForm">
-      <label>ชื่อผู้แจ้งหรือผู้ประสบภัย *</label>
-      <input name="name" required>
+<div class="container">
+  <h2>📍 แจ้งตำแหน่งผู้ประสบภัย</h2>
 
-      <label>เบอร์โทรติดต่อ *</label>
-      <input name="phone" required>
+  <form id="reportForm">
 
-      <label>ที่อยู่ / จุดสังเกต (ไม่บังคับ)</label>
-      <textarea name="address" rows="2"
-        placeholder="เช่น หลังวัด..., ซอย..., ใกล้เสาไฟฟ้าหมายเลข... (ถ้าไม่สะดวกระบุ สามารถเว้นว่างได้)">
-      </textarea>
+    <label>ชื่อผู้แจ้ง</label>
+    <input name="name" required>
 
-      <label>จังหวัด (ไม่บังคับ)</label>
-      <select name="province" id="provinceSelect">
-        <option value="">กำลังโหลดรายชื่อจังหวัด...</option>
-      </select>
+    <label>เบอร์โทรติดต่อ</label>
+    <input name="phone" type="tel" required>
 
-      <label>อำเภอ (ไม่บังคับ)</label>
-      <select name="district" id="districtSelect" disabled>
-        <option value="">เลือกจังหวัดก่อน</option>
-      </select>
+    <label>รายละเอียดตำแหน่งเพิ่มเติม</label>
+    <textarea name="note" rows="2"></textarea>
 
-      <label>ตำบล / เขต / เทศบาล (ไม่บังคับ)</label>
-      <select name="subdistrict" id="subdistrictSelect" disabled>
-        <option value="">เลือกอำเภอก่อน</option>
-      </select>
+    <label>จังหวัด</label>
+    <select id="provinceSelect" name="province" required>
+      <option value="">กำลังโหลด...</option>
+    </select>
 
-      <label>หมู่บ้าน / ชุมชน (พิมพ์เองได้ ไม่บังคับ)</label>
-      <input name="village" placeholder="เช่น หมู่ 1, บ้านโคก, ชุมชน...">
+    <label>อำเภอ</label>
+    <select id="districtSelect" name="district" disabled required>
+      <option value="">เลือกจังหวัดก่อน</option>
+    </select>
 
-      <label>ความแรงของกระแสน้ำ *</label>
-      <select name="waterLevel" required>
-        <option value="">เลือกความแรงกระแสน้ำ</option>
-        <option value="1">ระดับ 1 - น้ำแทบไม่ไหล</option>
-        <option value="2">ระดับ 2 - น้ำไหลช้า</option>
-        <option value="3">ระดับ 3 - น้ำไหลปานกลาง</option>
-        <option value="4">ระดับ 4 - น้ำไหลแรง</option>
-        <option value="5">ระดับ 5 - น้ำไหลแรงมาก อันตรายสูง</option>
-      </select>
+    <label>ตำบล</label>
+    <select id="subdistrictSelect" name="subdistrict" disabled required>
+      <option value="">เลือกอำเภอก่อน</option>
+    </select>
 
-      <label>รายละเอียดเพิ่มเติม (ไม่บังคับ)</label>
-      <textarea name="note" rows="3"
-        placeholder="เช่น มีผู้ป่วยติดเตียง, เด็กเล็ก, อยู่ชั้น 2 ฯลฯ">
-      </textarea>
+    <label>หมู่บ้าน / ชุมชน</label>
+    <input name="village" placeholder="เช่น หมู่ 1, บ้านโคก">
 
-      <p class="hint">* ต้องปักหมุดหรือเปิด GPS ให้ระบบทราบตำแหน่ง ก่อนกดส่งข้อมูล</p>
-      <p class="small" id="locationStatus"></p>
+    <label>ความแรงของกระแสน้ำ</label>
+    <select name="waterLevel" required>
+      <option value="">เลือก...</option>
+      <option value="1">ระดับ 1 - น้ำแทบไม่ไหล</option>
+      <option value="2">ระดับ 2 - น้ำไหลช้า</option>
+      <option value="3">ระดับ 3 - น้ำไหลปานกลาง</option>
+      <option value="4">ระดับ 4 - น้ำไหลแรง</option>
+      <option value="5">ระดับ 5 - น้ำไหลแรงมาก อันตรายสูง</option>
+    </select>
 
-      <button type="submit">ส่งข้อมูลผู้ประสบภัย</button>
-    </form>
+    <p class="hint">ระบบจะใช้พิกัด GPS หรือหมุดที่คุณปักบนแผนที่</p>
 
-    <p id="status"></p>
-  </div>
+    <button type="submit">ส่งข้อมูลผู้ประสบภัย</button>
+  </form>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <p id="status"></p>
+</div>
 
-  <!-- firebase config จากไฟล์ firebase-config.js -->
-  <script src="firebase-config.js"></script>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="firebase-config.js"></script>
 
-  <!-- Firebase v10 + Firestore + Dropdown จังหวัด/อำเภอ/ตำบล ทั้งประเทศ -->
-  <script type="module">
-    import { initializeApp } 
-      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { 
-      getFirestore, 
-      collection, 
-      addDoc, 
-      serverTimestamp 
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<!-- Firebase v10 -->
+<script type="module">
+  import { initializeApp } 
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    deleteDoc,
+    getDocs,
+    query,
+    where,
+    serverTimestamp,
+    doc
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const app = initializeApp(firebaseConfig);
-    const db  = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
 
-    const statusEl   = document.getElementById('status');
-    const form       = document.getElementById('reportForm');
-    const locStatus  = document.getElementById('locationStatus');
+  // ---------- MAP ----------
+  const map = L.map('map').setView([7.0, 100.5], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    const provinceSelect    = document.getElementById('provinceSelect');
-    const districtSelect    = document.getElementById('districtSelect');
-    const subdistrictSelect = document.getElementById('subdistrictSelect');
+  let marker = L.marker([7.0, 100.5], { draggable:true }).addTo(map);
 
-    // ---------- แผนที่ + หมุด ----------
-    const map = L.map('map').setView([7.0, 100.5], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19
-    }).addTo(map);
-
-    let marker = L.marker([7.0, 100.5], { draggable:true }).addTo(map);
-    let hasUserLocation = false; // true เมื่อได้ GPS หรือผู้ใช้ขยับหมุด
-
-    function updateLocStatus() {
-      const latlng = marker.getLatLng();
-      locStatus.textContent = `พิกัดปัจจุบัน: ${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
-    }
-
-    // ใช้ GPS มือถือ ถ้ามี
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(pos => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        marker.setLatLng([lat, lng]);
-        map.setView([lat, lng], 15);
-        hasUserLocation = true;
-        updateLocStatus();
-      }, () => {
-        // ถ้า user ไม่อนุญาตหรือหาพิกัดไม่ได้ ก็ให้ใช้หมุดเลื่อนเอง
-        updateLocStatus();
-      });
-    } else {
-      updateLocStatus();
-    }
-
-    // คลิกแผนที่เพื่อย้ายหมุด
-    map.on('click', e => {
-      marker.setLatLng(e.latlng);
-      hasUserLocation = true;
-      updateLocStatus();
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      marker.setLatLng([lat, lng]);
+      map.setView([lat, lng], 15);
     });
+  }
 
-    marker.on('dragend', () => {
-      hasUserLocation = true;
-      updateLocStatus();
+  map.on("click", e => marker.setLatLng(e.latlng));
+
+  // ---------- LOAD THAI PROVINCE DATA ----------
+  const P_URL = "https://raw.githubusercontent.com/kongvut/thai-province-data/refs/heads/master/api/latest/province.json";
+  const D_URL = "https://raw.githubusercontent.com/kongvut/thai-province-data/refs/heads/master/api/latest/district.json";
+  const S_URL = "https://raw.githubusercontent.com/kongvut/thai-province-data/refs/heads/master/api/latest/sub_district.json";
+
+  let provinces = [];
+  let districts = [];
+  let subdistricts = [];
+
+  const provinceSelect = document.getElementById("provinceSelect");
+  const districtSelect = document.getElementById("districtSelect");
+  const subdistrictSelect = document.getElementById("subdistrictSelect");
+
+  async function loadThaiData() {
+    provinces = await (await fetch(P_URL)).json();
+    districts = await (await fetch(D_URL)).json();
+    subdistricts = await (await fetch(S_URL)).json();
+
+    provinceSelect.innerHTML = '<option value="">เลือกจังหวัด</option>';
+    provinces.forEach(p => {
+      provinceSelect.innerHTML += `<option>${p.name_th}</option>`;
     });
+  }
 
-    // ---------- โหลดข้อมูล จังหวัด/อำเภอ/ตำบล ทั้งประเทศ ----------
-    const PROVINCE_URL   = "https://raw.githubusercontent.com/kongvut/thai-province-data/refs/heads/master/api/latest/province.json";
-    const DISTRICT_URL   = "https://raw.githubusercontent.com/kongvut/thai-province-data/refs/heads/master/api/latest/district.json";
-    const SUBDISTRICT_URL= "https://raw.githubusercontent.com/kongvut/thai-province-data/refs/heads/master/api/latest/sub_district.json";
+  provinceSelect.addEventListener("change", () => {
+    const p = provinces.find(x => x.name_th === provinceSelect.value);
+    districtSelect.disabled = false;
 
-    let provinces   = [];
-    let districts   = [];
-    let subdistricts= [];
+    const d = districts.filter(x => x.province_id === p.id);
+    districtSelect.innerHTML = '<option value="">เลือกอำเภอ</option>';
+    d.forEach(v => districtSelect.innerHTML += `<option>${v.name_th}</option>`);
+  });
 
-    async function loadProvinces() {
-      try {
-        const res = await fetch(PROVINCE_URL);
-        provinces = await res.json();
-        // เติมจังหวัดทั้งหมด
-        provinceSelect.innerHTML = '<option value="">ไม่ระบุจังหวัด</option>';
-        provinces.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.name_th;
-          opt.textContent = p.name_th;
-          provinceSelect.appendChild(opt);
-        });
-      } catch (err) {
-        console.error(err);
-        provinceSelect.innerHTML = '<option value="">โหลดจังหวัดไม่สำเร็จ (สามารถเว้นว่างได้)</option>';
-      }
-    }
+  districtSelect.addEventListener("change", () => {
+    const d = districts.find(x => x.name_th === districtSelect.value);
+    subdistrictSelect.disabled = false;
 
-    async function ensureDistricts() {
-      if (districts.length) return;
-      try {
-        const res = await fetch(DISTRICT_URL);
-        districts = await res.json();
-      } catch (err) {
-        console.error(err);
-      }
-    }
+    const s = subdistricts.filter(x => x.district_id === d.id);
+    subdistrictSelect.innerHTML = '<option value="">เลือกตำบล</option>';
+    s.forEach(v => subdistrictSelect.innerHTML += `<option>${v.name_th}</option>`);
+  });
 
-    async function ensureSubdistricts() {
-      if (subdistricts.length) return;
-      try {
-        const res = await fetch(SUBDISTRICT_URL);
-        subdistricts = await res.json();
-      } catch (err) {
-        console.error(err);
-      }
-    }
+  loadThaiData();
 
-    provinceSelect.addEventListener('change', async () => {
-      const provinceName = provinceSelect.value;
-      districtSelect.innerHTML = '';
-      subdistrictSelect.innerHTML = '<option value="">เลือกอำเภอก่อน</option>';
-      subdistrictSelect.disabled = true;
+  // ---------- FORM SUBMIT ----------
+  const form = document.getElementById("reportForm");
+  const statusEl = document.getElementById("status");
 
-      if (!provinceName) {
-        districtSelect.innerHTML = '<option value="">ไม่ระบุอำเภอ</option>';
-        districtSelect.disabled = true;
-        return;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const phoneInput = form.phone.value.trim();
+    statusEl.textContent = "กำลังตรวจสอบข้อมูลเก่า...";
+
+    try {
+
+      // 1. ค้นหาว่ามีเคสเบอร์นี้ไหม
+      const q = query(collection(db, "cases"), where("phone", "==", phoneInput));
+      const snap = await getDocs(q);
+
+      // 2. ถ้ามีเคสเก่า → ลบทิ้งก่อน
+      if (!snap.empty) {
+        for (const d of snap.docs) {
+          await deleteDoc(doc(db, "cases", d.id));
+        }
       }
 
-      districtSelect.disabled = false;
-      districtSelect.innerHTML = '<option value="">กำลังโหลดอำเภอ...</option>';
-
-      await ensureDistricts();
-
-      const provinceObj = provinces.find(p => p.name_th === provinceName);
-      if (!provinceObj) {
-        districtSelect.innerHTML = '<option value="">ไม่พบอำเภอของจังหวัดนี้</option>';
-        return;
-      }
-
-      const ds = districts.filter(d => d.province_id === provinceObj.id);
-      districtSelect.innerHTML = '<option value="">ไม่ระบุอำเภอ</option>';
-      ds.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d.name_th;
-        opt.textContent = d.name_th;
-        districtSelect.appendChild(opt);
-      });
-    });
-
-    districtSelect.addEventListener('change', async () => {
-      const districtName = districtSelect.value;
-      subdistrictSelect.innerHTML = '';
-
-      if (!districtName) {
-        subdistrictSelect.innerHTML = '<option value="">ไม่ระบุตำบล</option>';
-        subdistrictSelect.disabled = true;
-        return;
-      }
-
-      subdistrictSelect.disabled = false;
-      subdistrictSelect.innerHTML = '<option value="">กำลังโหลดตำบล...</option>';
-
-      await ensureSubdistricts();
-      await ensureDistricts(); // เผื่อยังไม่โหลด
-
-      const districtObj = districts.find(d => d.name_th === districtName);
-      if (!districtObj) {
-        subdistrictSelect.innerHTML = '<option value="">ไม่พบตำบลของอำเภอนี้</option>';
-        return;
-      }
-
-      const subs = subdistricts.filter(s => s.district_id === districtObj.id);
-      subdistrictSelect.innerHTML = '<option value="">ไม่ระบุตำบล</option>';
-      subs.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.name_th;
-        opt.textContent = s.name_th;
-        subdistrictSelect.appendChild(opt);
-      });
-    });
-
-    // โหลดจังหวัดตอนเปิดหน้า
-    loadProvinces();
-
-    // ---------- ส่งฟอร์ม ----------
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      if (!hasUserLocation) {
-        alert('กรุณาปักหมุดหรือตรวจสอบว่าเปิด GPS แล้ว ก่อนส่งข้อมูล');
-        return;
-      }
-
+      // 3. เพิ่มข้อมูลใหม่
       const latlng = marker.getLatLng();
 
       const data = {
         name : form.name.value.trim(),
-        phone: form.phone.value.trim(),
-        address: form.address.value.trim(), // ที่อยู่พิมพ์เอง (ไม่บังคับ)
+        phone: phoneInput,
         note : form.note.value.trim(),
         lat  : latlng.lat,
         lng  : latlng.lng,
@@ -333,23 +213,23 @@
           subdistrict: form.subdistrict.value,
           village    : form.village.value.trim()
         },
-        waterLevel: Number(form.waterLevel.value), // 1–5
-        status    : 'open',
+        waterLevel: Number(form.waterLevel.value),
+        status    : "open",
         createdAt : serverTimestamp()
       };
 
-      statusEl.textContent = 'กำลังส่งข้อมูล...';
+      await addDoc(collection(db, "cases"), data);
 
-      try {
-        await addDoc(collection(db, 'cases'), data);
-        statusEl.textContent = 'ส่งข้อมูลเรียบร้อย ขอบคุณครับ ✅';
-        form.reset();
-        hasUserLocation = false; // รอบหน้าต้องให้ปักหมุดใหม่
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = 'ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
-      }
-    });
-  </script>
+      statusEl.textContent = "✔ ส่งข้อมูลสำเร็จ ข้อมูลใหม่แทนข้อมูลเก่าแล้ว";
+      alert("ส่งข้อมูลสำเร็จ!");
+      form.reset();
+
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "❌ เกิดข้อผิดพลาด ไม่สามารถส่งข้อมูลได้";
+    }
+  });
+</script>
+
 </body>
 </html>
