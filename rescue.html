@@ -4,9 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>ระบบหน่วยกู้ภัย - SOS</title>
-
-  <!-- แผนที่ Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body { margin:0; font-family: system-ui, -apple-system, sans-serif; }
     .topbar {
@@ -19,8 +16,6 @@
     #status { font-size:12px; margin-top:4px; color:#ffeb3b; }
     #status.error { color:#ff5252; font-weight:bold; }
 
-    #map { height: 40vh; }
-
     .container { padding: 8px 12px; max-width:960px; margin:auto; }
 
     table { width:100%; border-collapse: collapse; font-size:13px; }
@@ -30,16 +25,6 @@
       vertical-align: top;
     }
     th { background:#f0f0f0; }
-
-    button {
-      padding:4px 8px;
-      font-size:12px;
-      border:none;
-      border-radius:6px;
-      cursor:pointer;
-    }
-    .btn-done { background:#43a047; color:#fff; margin-right:4px; }
-    .btn-del  { background:#e53935; color:#fff; }
 
     #debug-box {
       margin-top:8px;
@@ -57,39 +42,32 @@
 <body>
   <div class="topbar">
     <h1>🚑 ระบบหน่วยกู้ภัย - SOS</h1>
-    <small>ข้อมูลจากฐานข้อมูล Firestore (collection: cases)</small>
+    <small>ดึงข้อมูลตรงจาก Firestore (collection: cases)</small>
     <div id="status"></div>
   </div>
 
-  <div id="map"></div>
-
   <div class="container">
-    <h3>รายการผู้ประสบภัย (เฉพาะเคสที่ยังไม่ปิด)</h3>
+    <h3>รายการผู้ประสบภัย (โชว์ทุกเอกสารใน cases)</h3>
     <table>
       <thead>
         <tr>
           <th>ชื่อ</th>
           <th>เบอร์</th>
-          <th>พื้นที่</th>
-          <th>ระดับกระแสน้ำ</th>
+          <th>จังหวัด / อำเภอ / ตำบล / หมู่</th>
+          <th>ระดับน้ำ</th>
           <th>รายละเอียด</th>
           <th>พิกัด</th>
-          <th>จัดการ</th>
+          <th>status</th>
         </tr>
       </thead>
       <tbody id="caseTableBody"></tbody>
     </table>
 
-    <!-- กล่อง debug ให้ดูดาต้าดิบจาก Firestore -->
     <div id="debug-box"></div>
   </div>
 
-  <!-- Leaflet -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- ใช้ Firebase แบบ config ตรง ๆ -->
   <script type="module">
-    // ==== CONFIG โปรเจกต์ sos-rescue-system ====
+    // CONFIG โปรเจกต์ sos-rescue-system
     const firebaseConfig = {
       apiKey: "AIzaSyAbCi1b3xS4b2F-9gH14l8iv_r3X0MzW",
       authDomain: "sos-rescue-system.firebaseapp.com",
@@ -105,17 +83,12 @@
     import {
       getFirestore,
       collection,
-      getDocs,
-      updateDoc,
-      deleteDoc,
-      doc
+      getDocs
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const statusEl = document.getElementById('status');
     const tbody    = document.getElementById('caseTableBody');
     const debugBox = document.getElementById('debug-box');
-
-    let db;
 
     function debug(msg, obj) {
       const time = new Date().toLocaleTimeString();
@@ -126,12 +99,14 @@
       debugBox.textContent += "------------------------------\n";
     }
 
+    let db;
+
     // เริ่ม Firebase
     try {
       const app = initializeApp(firebaseConfig);
       db = getFirestore(app);
-      statusEl.textContent = 'เชื่อมต่อ Firebase สำเร็จ กำลังโหลดข้อมูลจาก Firestore...';
-      debug('Firebase initialized', firebaseConfig);
+      statusEl.textContent = 'เชื่อมต่อ Firebase สำเร็จ กำลังโหลดข้อมูล...';
+      debug('Firebase initialized');
     } catch (err) {
       console.error(err);
       statusEl.textContent = '❌ เชื่อมต่อ Firebase ไม่สำเร็จ: ' + err.message;
@@ -139,98 +114,54 @@
       debug('Firebase init error', { message: err.message });
     }
 
-    // ตั้งค่าแผนที่
-    const map = L.map('map').setView([7.0, 100.5], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19
-    }).addTo(map);
-
-    const markers = {};
-    const levelColor = {
-      1: "#4caf50",
-      2: "#8bc34a",
-      3: "#ffeb3b",
-      4: "#ff9800",
-      5: "#f44336"
-    };
-
     async function loadCases() {
       if (!db) {
-        debug('loadCases skipped: no db');
+        debug('ไม่มี db (Firebase ไม่พร้อม)');
         return;
       }
       try {
-        debug('Calling getDocs(cases)...');
+        debug('เรียก getDocs(collection "cases")');
         const snap = await getDocs(collection(db, 'cases'));
-
-        debug('getDocs result', { size: snap.size });
+        debug('ผลลัพธ์ getDocs', { size: snap.size });
 
         tbody.innerHTML = '';
-        for (const id in markers) {
-          map.removeLayer(markers[id]);
-          delete markers[id];
-        }
 
         if (snap.empty) {
-          statusEl.textContent = 'เชื่อมต่อ Firestore แล้ว แต่ยังไม่มีข้อมูลผู้ประสบภัย (snap.size = 0)';
+          statusEl.textContent = 'เชื่อมต่อ Firestore ได้แล้ว แต่ collection "cases" ว่าง (ไม่มีเอกสาร)';
           return;
         }
 
-        const raw = [];
+        const rows = [];
         snap.forEach(docSnap => {
-          raw.push({ id: docSnap.id, ...docSnap.data() });
+          rows.push({ id: docSnap.id, ...docSnap.data() });
         });
-        debug('Raw documents', raw);
+        debug('ข้อมูลดิบจาก Firestore', rows);
 
-        raw.forEach(c => {
-          // แสดงเฉพาะ status = "open" หรือไม่มี status
-          if (c.status && c.status !== 'open') return;
-
+        rows.forEach(c => {
           const region = c.region || {};
-          const name  = c.name  || '';
-          const phone = c.phone || '';
-          const note  = c.note  || '';
-          const lat   = typeof c.lat === 'number' ? c.lat : null;
-          const lng   = typeof c.lng === 'number' ? c.lng : null;
+          const lat   = c.lat;
+          const lng   = c.lng;
           const water = c.waterLevel ?? c.waterlevel ?? '-';
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${name}</td>
-            <td>${phone ? <a href="tel:${phone}">${phone}</a> : ''}</td>
+            <td>${c.name || ''}</td>
+            <td>${c.phone || ''}</td>
             <td>
-              ${region.province || ''}<br>
-              อ.${region.district || ''} ต.${region.subdistrict || ''} ม.${region.village || ''}
+              ${region.province || ''} /
+              ${region.district || ''} /
+              ${region.subdistrict || ''} /
+              ${region.village || ''}
             </td>
-            <td>ระดับ ${water}</td>
-            <td>${note}</td>
-            <td>${lat !== null && lng !== null ? ${lat.toFixed(5)}, ${lng.toFixed(5)} : ''}</td>
-            <td>
-              <button class="btn-done" data-id="${c.id}">ช่วยแล้ว</button>
-              <button class="btn-del"  data-id="${c.id}">ลบ</button>
-            </td>
+            <td>${water}</td>
+            <td>${c.note || ''}</td>
+            <td>${lat !== undefined && lng !== undefined ? lat + ', ' + lng : ''}</td>
+            <td>${c.status || ''}</td>
           `;
           tbody.appendChild(tr);
-
-          if (lat !== null && lng !== null) {
-            const color = levelColor[water] || "#000";
-            const marker = L.circleMarker([lat, lng], {
-              radius: 9,
-              color,
-              fillColor: color,
-              fillOpacity: 0.85
-            }).addTo(map)
-              .bindPopup(`
-                <strong>${name}</strong><br>
-                เบอร์: ${phone}<br>
-                พื้นที่: อ.${region.district || ''} ต.${region.subdistrict || ''} ม.${region.village || ''}<br>
-                ความแรงกระแสน้ำ: ระดับ ${water}
-              `);
-            markers[c.id] = marker;
-          }
         });
 
-        statusEl.textContent = 'โหลดข้อมูลจาก Firestore สำเร็จ (เอกสารทั้งหมด ' + raw.length + ' รายการ)';
+        statusEl.textContent = 'โหลดข้อมูลสำเร็จ: ทั้งหมด ' + rows.length + ' เอกสาร';
       } catch (err) {
         console.error(err);
         statusEl.textContent = '❌ อ่านข้อมูลจาก Firestore ไม่สำเร็จ: ' + err.message;
@@ -240,45 +171,6 @@
     }
 
     loadCases();
-
-    // ปุ่มจัดการ
-    tbody.addEventListener('click', async (e) => {
-      const id = e.target.getAttribute('data-id');
-      if (!id || !db) return;
-      const ref = doc(db, 'cases', id);
-
-      if (e.target.classList.contains('btn-done')) {
-        if (confirm('ยืนยันว่าช่วยเหลือเคสนี้แล้ว?')) {
-          await updateDoc(ref, { status: 'resolved' });
-          alert('บันทึกว่าเคสนี้ช่วยแล้ว');
-          loadCases();
-        }
-      } else if (e.target.classList.contains('btn-del')) {
-        if (confirm('ลบเคสนี้ออกจากระบบถาวร?')) {
-          await deleteDoc(ref);
-          alert('ลบเคสเรียบร้อย');
-          loadCases();
-        }
-      }
-    });
-
-    // ตำแหน่งหน่วยกู้ภัย
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(pos => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        if (!window._meMarker) {
-          window._meMarker = L.circleMarker([lat, lng], {
-            radius: 8,
-            color: "#2196f3",
-            fillColor: "#2196f3",
-            fillOpacity: 0.9
-          }).addTo(map).bindPopup('ตำแหน่งหน่วยกู้ภัย');
-        } else {
-          window._meMarker.setLatLng([lat, lng]);
-        }
-      });
-    }
   </script>
 </body>
 </html>
