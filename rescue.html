@@ -4,70 +4,235 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>ระบบหน่วยกู้ภัย - SOS</title>
+
+  <!-- Leaflet map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
   <style>
-    body { margin:0; font-family: system-ui, -apple-system, sans-serif; }
+    * { box-sizing: border-box; }
+    body {
+      margin:0;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background:#f5f5f5;
+    }
+
     .topbar {
       padding: 8px 12px;
       background:#1e88e5;
       color:#fff;
     }
-    .topbar h1 { margin:0; font-size:18px; }
-    .topbar small { font-size:12px; display:block; }
-    #status { font-size:12px; margin-top:4px; color:#ffeb3b; }
-    #status.error { color:#ff5252; font-weight:bold; }
-
-    .container { padding: 8px 12px; max-width:960px; margin:auto; }
-
-    table { width:100%; border-collapse: collapse; font-size:13px; }
-    th, td {
-      border:1px solid #ddd;
-      padding:4px;
-      vertical-align: top;
+    .topbar h1 {
+      margin:0;
+      font-size:18px;
     }
-    th { background:#f0f0f0; }
+    .topbar small {
+      font-size:12px;
+      display:block;
+      opacity:0.9;
+    }
+    #status {
+      font-size:12px;
+      margin-top:4px;
+      color:#ffeb3b;
+    }
+    #status.error {
+      color:#ff5252;
+      font-weight:bold;
+    }
 
-    #debug-box {
-      margin-top:8px;
-      background:#111;
-      color:#0f0;
+    .filters {
+      padding:8px 12px;
+      background:#fff;
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      border-bottom:1px solid #ddd;
+    }
+    .filters select {
+      padding:4px 6px;
+      font-size:13px;
+      border-radius:6px;
+      border:1px solid #ccc;
+    }
+    .filters label {
+      font-size:12px;
+      color:#333;
+      display:flex;
+      flex-direction:column;
+    }
+
+    #map {
+      height: 40vh;
+      width:100%;
+    }
+
+    .container {
+      max-width: 1024px;
+      margin:auto;
+      padding:8px 12px 16px;
+    }
+
+    h3 {
+      margin:8px 0;
+      font-size:16px;
+    }
+
+    .table-wrapper {
+      background:#fff;
+      border-radius:8px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.05);
+      overflow-x:auto;
+    }
+
+    table {
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+      min-width:700px;
+    }
+    th, td {
+      border:1px solid #eee;
+      padding:6px 4px;
+      vertical-align:top;
+      text-align:left;
+    }
+    th {
+      background:#f2f2f2;
+      position:sticky;
+      top:0;
+      z-index:1;
+    }
+
+    button {
+      padding:4px 8px;
+      font-size:12px;
+      border:none;
+      border-radius:999px;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    .btn-done {
+      background:#43a047;
+      color:#fff;
+      margin-right:4px;
+    }
+    .btn-del {
+      background:#e53935;
+      color:#fff;
+    }
+    .tag-open {
+      display:inline-block;
+      padding:2px 6px;
+      border-radius:999px;
+      background:#ff9800;
+      color:#fff;
       font-size:11px;
-      padding:6px;
+    }
+    .tag-resolved {
+      display:inline-block;
+      padding:2px 6px;
+      border-radius:999px;
+      background:#43a047;
+      color:#fff;
+      font-size:11px;
+    }
+
+    .badge-level {
+      display:inline-block;
+      padding:2px 6px;
       border-radius:4px;
-      max-height:180px;
-      overflow:auto;
-      white-space:pre-wrap;
+      font-size:11px;
+      color:#fff;
+    }
+
+    @media (max-width: 600px) {
+      .filters {
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      #map {
+        height: 35vh;
+      }
     }
   </style>
 </head>
 <body>
   <div class="topbar">
     <h1>🚑 ระบบหน่วยกู้ภัย - SOS</h1>
-    <small>ดึงข้อมูลตรงจาก Firestore (collection: cases)</small>
-    <div id="status"></div>
+    <small>ดึงข้อมูลแบบ Realtime จาก Firestore (collection: <b>cases</b>)</small>
+    <div id="status">กำลังเชื่อมต่อ Firebase...</div>
   </div>
+
+  <!-- แถบกรองข้อมูล -->
+  <div class="filters">
+    <label>
+      จังหวัด
+      <select id="filter-province">
+        <option value="">ทั้งหมด</option>
+        <option value="สงขลา">สงขลา</option>
+      </select>
+    </label>
+    <label>
+      อำเภอ
+      <select id="filter-district">
+        <option value="">ทั้งหมด</option>
+        <option value="หาดใหญ่">หาดใหญ่</option>
+        <option value="เมืองสงขลา">เมืองสงขลา</option>
+        <option value="นาหม่อม">นาหม่อม</option>
+      </select>
+    </label>
+    <label>
+      ตำบล / เทศบาล
+      <select id="filter-subdistrict">
+        <option value="">ทั้งหมด</option>
+        <option value="บ้านพรุ">บ้านพรุ</option>
+        <option value="คลองแห">คลองแห</option>
+        <option value="พะวง">พะวง</option>
+      </select>
+    </label>
+    <label>
+      ระดับกระแสน้ำ
+      <select id="filter-water">
+        <option value="">ทุกระดับ</option>
+        <option value="1">1 - น้ำแทบไม่ไหล</option>
+        <option value="2">2 - น้ำไหลช้า</option>
+        <option value="3">3 - น้ำไหลปานกลาง</option>
+        <option value="4">4 - น้ำไหลแรง</option>
+        <option value="5">5 - น้ำไหลแรงมาก</option>
+      </select>
+    </label>
+  </div>
+
+  <!-- แผนที่ -->
+  <div id="map"></div>
 
   <div class="container">
-    <h3>รายการผู้ประสบภัย (โชว์ทุกเอกสารใน cases)</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>ชื่อ</th>
-          <th>เบอร์</th>
-          <th>จังหวัด / อำเภอ / ตำบล / หมู่</th>
-          <th>ระดับน้ำ</th>
-          <th>รายละเอียด</th>
-          <th>พิกัด</th>
-          <th>status</th>
-        </tr>
-      </thead>
-      <tbody id="caseTableBody"></tbody>
-    </table>
-
-    <div id="debug-box"></div>
+    <h3>รายการผู้ประสบภัย (เฉพาะเคสที่ยังไม่ปิด)</h3>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>ชื่อ</th>
+            <th>เบอร์</th>
+            <th>พื้นที่</th>
+            <th>ระดับกระแสน้ำ</th>
+            <th>รายละเอียด</th>
+            <th>พิกัด</th>
+            <th>สถานะ</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody id="caseTableBody"></tbody>
+      </table>
+    </div>
   </div>
 
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Firebase + Firestore -->
   <script type="module">
-    // CONFIG โปรเจกต์ sos-rescue-system
+    // ====== CONFIG โปรเจกต์ sos-rescue-system ======
     const firebaseConfig = {
       apiKey: "AIzaSyAbCi1b3xS4b2F-9gH14l8iv_r3X0MzW",
       authDomain: "sos-rescue-system.firebaseapp.com",
@@ -83,94 +248,208 @@
     import {
       getFirestore,
       collection,
-      getDocs
+      query,
+      where,
+      onSnapshot,
+      updateDoc,
+      deleteDoc,
+      doc,
+      serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const statusEl = document.getElementById('status');
     const tbody    = document.getElementById('caseTableBody');
-    const debugBox = document.getElementById('debug-box');
 
-    function debug(msg, obj) {
-      const time = new Date().toLocaleTimeString();
-      debugBox.textContent += `[${time}] ${msg}\n`;
-      if (obj !== undefined) {
-        debugBox.textContent += JSON.stringify(obj, null, 2) + "\n";
-      }
-      debugBox.textContent += "------------------------------\n";
-    }
+    const filterProvince   = document.getElementById('filter-province');
+    const filterDistrict   = document.getElementById('filter-district');
+    const filterSubdistrict= document.getElementById('filter-subdistrict');
+    const filterWater      = document.getElementById('filter-water');
 
     let db;
+    let allCases = []; // เก็บข้อมูลทั้งหมด จาก onSnapshot
 
-    // เริ่ม Firebase
+    // สีของระดับน้ำ
+    const levelColor = {
+      1: "#4caf50",
+      2: "#8bc34a",
+      3: "#ffeb3b",
+      4: "#ff9800",
+      5: "#f44336"
+    };
+
+    // ====== เริ่ม Firebase ======
     try {
       const app = initializeApp(firebaseConfig);
       db = getFirestore(app);
-      statusEl.textContent = 'เชื่อมต่อ Firebase สำเร็จ กำลังโหลดข้อมูล...';
-      debug('Firebase initialized');
+      statusEl.textContent = 'เชื่อมต่อ Firebase สำเร็จ กำลังโหลดข้อมูลแบบ Realtime...';
     } catch (err) {
       console.error(err);
       statusEl.textContent = '❌ เชื่อมต่อ Firebase ไม่สำเร็จ: ' + err.message;
       statusEl.classList.add('error');
-      debug('Firebase init error', { message: err.message });
     }
 
-    async function loadCases() {
-      if (!db) {
-        debug('ไม่มี db (Firebase ไม่พร้อม)');
-        return;
+    // ====== ตั้งค่าแผนที่ ======
+    const map = L.map('map').setView([7.0, 100.5], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
+    const markers = {};
+
+    function clearMarkers() {
+      for (const id in markers) {
+        map.removeLayer(markers[id]);
+        delete markers[id];
       }
-      try {
-        debug('เรียก getDocs(collection "cases")');
-        const snap = await getDocs(collection(db, 'cases'));
-        debug('ผลลัพธ์ getDocs', { size: snap.size });
+    }
 
-        tbody.innerHTML = '';
+    function renderMarkers(cases) {
+      clearMarkers();
+      cases.forEach(c => {
+        if (typeof c.lat !== 'number' || typeof c.lng !== 'number') return;
+        const color = levelColor[c.waterLevel] || "#000";
+        const region = c.region || {};
+        const popupHtml = `
+          <strong>${c.name || ''}</strong><br>
+          เบอร์: ${c.phone || ''}<br>
+          พื้นที่: ${region.province || ''} อ.${region.district || ''} ต.${region.subdistrict || ''} ม.${region.village || ''}<br>
+          ระดับกระแสน้ำ: ระดับ ${c.waterLevel ?? '-'}<br>
+          รายละเอียด: ${c.note || ''}
+        `;
+        const m = L.circleMarker([c.lat, c.lng], {
+          radius: 9,
+          color,
+          fillColor: color,
+          fillOpacity: 0.9
+        }).addTo(map).bindPopup(popupHtml);
+        markers[c.id] = m;
+      });
+    }
 
-        if (snap.empty) {
-          statusEl.textContent = 'เชื่อมต่อ Firestore ได้แล้ว แต่ collection "cases" ว่าง (ไม่มีเอกสาร)';
-          return;
+    // แสดงตำแหน่งหน่วยกู้ภัย
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(pos => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        if (!window._meMarker) {
+          window._meMarker = L.circleMarker([lat, lng], {
+            radius: 8,
+            color: "#2196f3",
+            fillColor: "#2196f3",
+            fillOpacity: 0.9
+          }).addTo(map).bindPopup('ตำแหน่งหน่วยกู้ภัย');
+        } else {
+          window._meMarker.setLatLng([lat, lng]);
         }
+      });
+    }
 
-        const rows = [];
+    // ====== ฟังก์ชัน Render ตาราง ======
+    function renderTable() {
+      // กรองจาก allCases ตาม filter ที่เลือก
+      let cases = allCases.slice(); // copy
+
+      cases = cases.filter(c => {
+        if (c.status && c.status !== 'open') return false;
+
+        const r = c.region || {};
+        if (filterProvince.value && r.province !== filterProvince.value) return false;
+        if (filterDistrict.value && r.district !== filterDistrict.value) return false;
+        if (filterSubdistrict.value && r.subdistrict !== filterSubdistrict.value) return false;
+        if (filterWater.value && String(c.waterLevel) !== filterWater.value) return false;
+        return true;
+      });
+
+      // เรียงตามเวลาสร้าง (ใหม่สุดอยู่บน)
+      cases.sort((a,b) => {
+        const ta = a.createdAt?.seconds || 0;
+        const tb = b.createdAt?.seconds || 0;
+        return tb - ta;
+      });
+
+      tbody.innerHTML = '';
+      cases.forEach(c => {
+        const region = c.region || {};
+        const lat   = c.lat;
+        const lng   = c.lng;
+        const water = c.waterLevel ?? '-';
+
+        let waterText = `ระดับ ${water}`;
+        let waterClass = 'badge-level';
+        const color = levelColor[water];
+        if (color) waterText = `<span class="badge-level" style="background:${color}">ระดับ ${water}</span>`;
+        else waterText = `<span class="badge-level" style="background:#777">ไม่ระบุ</span>`;
+
+        const statusTag = (!c.status || c.status === 'open')
+          ? '<span class="tag-open">รอช่วยเหลือ</span>'
+          : '<span class="tag-resolved">ช่วยแล้ว</span>';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${c.name || ''}</td>
+          <td>${c.phone ? `<a href="tel:${c.phone}">${c.phone}</a>` : ''}</td>
+          <td>
+            ${region.province || ''}<br>
+            อ.${region.district || ''} ต.${region.subdistrict || ''} ม.${region.village || ''}
+          </td>
+          <td>${waterText}</td>
+          <td>${c.note || ''}</td>
+          <td>${(typeof lat === 'number' && typeof lng === 'number') ? `${lat.toFixed(5)}, ${lng.toFixed(5)}` : ''}</td>
+          <td>${statusTag}</td>
+          <td>
+            <button class="btn-done" data-id="${c.id}">ช่วยแล้ว</button>
+            <button class="btn-del"  data-id="${c.id}">ลบ</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      statusEl.textContent = 'โหลดข้อมูลสำเร็จ: เคสที่ยังเปิดอยู่ ' + cases.length + ' รายการ';
+      renderMarkers(cases);
+    }
+
+    // ====== Subscribe Firestore แบบ Realtime ======
+    if (db) {
+      const qOpen = query(collection(db, 'cases')); // ดึงทั้งหมดก่อน แล้วกรองเอง
+      onSnapshot(qOpen, (snap) => {
+        const temp = [];
         snap.forEach(docSnap => {
-          rows.push({ id: docSnap.id, ...docSnap.data() });
+          temp.push({ id: docSnap.id, ...docSnap.data() });
         });
-        debug('ข้อมูลดิบจาก Firestore', rows);
-
-        rows.forEach(c => {
-          const region = c.region || {};
-          const lat   = c.lat;
-          const lng   = c.lng;
-          const water = c.waterLevel ?? c.waterlevel ?? '-';
-
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${c.name || ''}</td>
-            <td>${c.phone || ''}</td>
-            <td>
-              ${region.province || ''} /
-              ${region.district || ''} /
-              ${region.subdistrict || ''} /
-              ${region.village || ''}
-            </td>
-            <td>${water}</td>
-            <td>${c.note || ''}</td>
-            <td>${lat !== undefined && lng !== undefined ? lat + ', ' + lng : ''}</td>
-            <td>${c.status || ''}</td>
-          `;
-          tbody.appendChild(tr);
-        });
-
-        statusEl.textContent = 'โหลดข้อมูลสำเร็จ: ทั้งหมด ' + rows.length + ' เอกสาร';
-      } catch (err) {
+        allCases = temp;
+        renderTable();
+      }, (err) => {
         console.error(err);
         statusEl.textContent = '❌ อ่านข้อมูลจาก Firestore ไม่สำเร็จ: ' + err.message;
         statusEl.classList.add('error');
-        debug('getDocs error', { message: err.message });
-      }
+      });
     }
 
-    loadCases();
+    // ====== จัดการปุ่มในตาราง ======
+    tbody.addEventListener('click', async (e) => {
+      const id = e.target.getAttribute('data-id');
+      if (!id || !db) return;
+      const ref = doc(db, 'cases', id);
+
+      if (e.target.classList.contains('btn-done')) {
+        if (confirm('ยืนยันว่าช่วยเหลือเคสนี้แล้ว?')) {
+          await updateDoc(ref, {
+            status: 'resolved',
+            resolvedAt: serverTimestamp()
+          });
+          alert('บันทึกว่าเคสนี้ช่วยแล้ว');
+        }
+      } else if (e.target.classList.contains('btn-del')) {
+        if (confirm('ลบเคสนี้ออกจากระบบถาวร?')) {
+          await deleteDoc(ref);
+          alert('ลบเคสเรียบร้อย');
+        }
+      }
+    });
+
+    // ====== เปลี่ยน filter แล้วให้ render ใหม่ ======
+    [filterProvince, filterDistrict, filterSubdistrict, filterWater].forEach(sel => {
+      sel.addEventListener('change', renderTable);
+    });
   </script>
 </body>
 </html>
