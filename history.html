@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ประวัติเคสที่ได้รับการช่วยเหลือแล้ว - SOS</title>
+  <style>
+    * { box-sizing:border-box; }
+    body {
+      margin:0;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background:#f5f5f5;
+    }
+    .header {
+      background:#00897b;
+      color:#fff;
+      padding:10px 12px;
+      font-size:16px;
+    }
+    .header small { display:block; font-size:12px; opacity:0.9; }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 10px;
+      font-size:14px;
+    }
+
+    table {
+      width:100%;
+      border-collapse:collapse;
+      background:#fff;
+      font-size:13px;
+    }
+    th, td {
+      border:1px solid #ddd;
+      padding:4px 6px;
+      vertical-align:top;
+    }
+    th {
+      background:#e0f2f1;
+      text-align:center;
+      white-space:nowrap;
+    }
+    tr:nth-child(even) { background:#fafafa; }
+
+    .status-bar {
+      font-size:12px;
+      margin:6px 0;
+      color:#555;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    ✅ ผู้ที่ได้รับการช่วยเหลือแล้ว - SOS<br>
+    <small>ข้อมูลจาก Firestore (collection: <b>cases</b> | status = "closed")</small>
+  </div>
+
+  <div class="container">
+    <div class="status-bar" id="statusBar">กำลังโหลดข้อมูล...</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ชื่อ</th>
+          <th>เบอร์</th>
+          <th>พื้นที่</th>
+          <th>ระดับน้ำ</th>
+          <th>รายละเอียด</th>
+          <th>พิกัด</th>
+          <th>เวลาที่ช่วยเหลือ</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody">
+        <tr><td colspan="7" style="text-align:center;">ไม่มีข้อมูล</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script src="firebase-config.js"></script>
+  <script type="module">
+    import { initializeApp } 
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      query,
+      where,
+      orderBy
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+
+    const statusBar = document.getElementById('statusBar');
+    const tbody     = document.getElementById('historyBody');
+
+    function formatDate(ts) {
+      if (!ts || !ts.toDate) return '-';
+      const d = ts.toDate();
+      const y = d.getFullYear() + 543; // แปลงเป็น พ.ศ.
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const day = String(d.getDate()).padStart(2,'0');
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      return `${day}/${m}/${y} ${hh}:${mm} น.`;
+    }
+
+    async function loadHistory() {
+      statusBar.textContent = 'กำลังโหลดข้อมูลจาก Firestore...';
+      try {
+        const q = query(
+          collection(db, 'cases'),
+          where('status', '==', 'closed')
+        );
+        const snap = await getDocs(q);
+        const list = [];
+        snap.forEach(docSnap => {
+          const data = docSnap.data();
+          list.push({ id: docSnap.id, ...data });
+        });
+
+        // เรียงตาม resolvedAt ถ้ามี ถ้าไม่มีก็ใช้ createdAt
+        list.sort((a, b) => {
+          const ta = (a.resolvedAt || a.createdAt);
+          const tb = (b.resolvedAt || b.createdAt);
+          if (!ta || !tb) return 0;
+          return tb.toDate() - ta.toDate();
+        });
+
+        statusBar.textContent = `พบเคสที่ได้รับการช่วยเหลือแล้วทั้งหมด ${list.length} เคส`;
+
+        tbody.innerHTML = '';
+        if (!list.length) {
+          const tr = document.createElement('tr');
+          const td = document.createElement('td');
+          td.colSpan = 7;
+          td.style.textAlign = 'center';
+          td.textContent = 'ยังไม่มีเคสที่ถูกปิด';
+          tr.appendChild(td);
+          tbody.appendChild(tr);
+          return;
+        }
+
+        list.forEach(c => {
+          const tr = document.createElement('tr');
+          const area = [
+            c.region?.province || '',
+            c.region?.district || '',
+            c.region?.subdistrict || '',
+            c.region?.village || ''
+          ].filter(Boolean).join(' / ');
+
+          const latText = (typeof c.lat === 'number' && typeof c.lng === 'number')
+            ? `${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`
+            : '-';
+
+          const waterText = c.waterLevel ? `ระดับ ${c.waterLevel}` : '-';
+
+          tr.innerHTML = `
+            <td>${c.name || '-'}</td>
+            <td>${c.phone || '-'}</td>
+            <td>${area || '-'}</td>
+            <td style="text-align:center;">${waterText}</td>
+            <td>${c.note || c.address || '-'}</td>
+            <td>${latText}</td>
+            <td>${formatDate(c.resolvedAt || c.createdAt)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+        statusBar.textContent = 'โหลดข้อมูลไม่สำเร็จ โปรดลองใหม่';
+      }
+    }
+
+    loadHistory();
+  </script>
+</body>
+</html>
