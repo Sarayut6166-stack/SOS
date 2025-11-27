@@ -116,7 +116,7 @@
       color: #777;
     }
 
-    /* Popup Maps.me Suggestion */
+    /* Popup Maps.me แนะนำบน iOS */
     #mapsmePopup {
       display: none;
       position: fixed;
@@ -136,7 +136,7 @@
       text-align: center;
     }
 
-    /* Popup เลือกโหมดเปิดแผนที่ */
+    /* Popup เลือกโหมด Maps.me */
     #selectMapsPopup {
       display:none;
       position:fixed;
@@ -176,7 +176,7 @@
 
 <body>
 
-<!-- Popup แนะนำ Maps.me -->
+<!-- Popup แนะนำ Maps.me สำหรับ iOS -->
 <div id="mapsmePopup">
   <div id="mapsmeBox">
     <h3>📌 แนะนำสำหรับ iPhone/iPad</h3>
@@ -191,12 +191,12 @@
   </div>
 </div>
 
-<!-- Popup เลือกโหมดเปิดแผนที่ -->
+<!-- Popup เลือกโหมดเปิด Maps.me -->
 <div id="selectMapsPopup">
   <div id="selectMapsBox">
-    <h3>ต้องการเปิดแผนที่แบบใด?</h3>
+    <h3>ต้องการเปิด Maps.me แบบใด?</h3>
     <div id="openSingle" class="popup-btn">📍 เคสนี้เท่านั้น</div>
-    <div id="openAll" class="popup-btn">📍📍 ทุกพิกัดในพื้นที่</div>
+    <div id="openAll"   class="popup-btn">📍📍 ทุกพิกัดในพื้นที่</div>
     <div class="popup-btn popup-close" onclick="closeSelectPopup()">ยกเลิก</div>
   </div>
 </div>
@@ -205,17 +205,15 @@
 function isIOS(){
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
-
 function closeIOSPopup(){
   document.getElementById("mapsmePopup").style.display="none";
   localStorage.setItem("mapsInfoSeen", Date.now()+86400000);
 }
-
 window.addEventListener("load",()=>{
   if(!isIOS()) return;
-  const seen=localStorage.getItem("mapsInfoSeen");
-  if(seen && Number(seen)>Date.now()) return;
-  document.getElementById("mapsmePopup").style.display="block";
+  const seen = localStorage.getItem("mapsInfoSeen");
+  if(seen && Number(seen) > Date.now()) return;
+  document.getElementById("mapsmePopup").style.display = "block";
 });
 </script>
 
@@ -275,7 +273,7 @@ window.addEventListener("load",()=>{
         <th>ชื่อ</th>
         <th>เบอร์</th>
         <th>พื้นที่</th>
-        <th>น้ำ</th>
+        <th>ระดับน้ำ</th>
         <th>คน</th>
         <th>รายละเอียด</th>
         <th>แผนที่</th>
@@ -301,7 +299,7 @@ import {
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
-/* DOM References */
+/* DOM */
 const pFilter  = document.getElementById("filterProvince");
 const dFilter  = document.getElementById("filterDistrict");
 const sFilter  = document.getElementById("filterSubdistrict");
@@ -309,7 +307,7 @@ const tFilter  = document.getElementById("filterText");
 const pcFilter = document.getElementById("filterPeople");
 const tbody    = document.getElementById("caseBody");
 
-/* Load Provinces / Districts / Subdistricts */
+/* โหลดจังหวัด / อำเภอ / ตำบล */
 let provinces=[],districts=[],subdistricts=[];
 const URL_P="https://raw.githubusercontent.com/kongvut/thai-province-data/master/api/latest/province.json";
 const URL_D="https://raw.githubusercontent.com/kongvut/thai-province-data/master/api/latest/district.json";
@@ -326,22 +324,19 @@ async function loadThai(){
 }
 loadThai();
 
-/* ตัวแปรเก็บว่ากด Google หรือ Maps.me */
-let selectedMapApp = null;
-let selectedLatLng = null;
+/* ตัวแปรใช้กับ Maps.me popup */
+let selectedLatLng = null;  // {lat, lng}
 
-/* เปิด popup เลือกโหมด */
-window.openMapsChoice = (app, lat, lng)=>{
-  selectedMapApp = app;     // google / mapsme
+/* ฟังก์ชันเปิด popup Maps.me */
+window.openMapsChoice = (lat,lng)=>{
   selectedLatLng = {lat,lng};
   document.getElementById("selectMapsPopup").style.display="block";
 };
-
 window.closeSelectPopup = ()=>{
   document.getElementById("selectMapsPopup").style.display="none";
 };
 
-/* เปลี่ยนจังหวัด */
+/* เปลี่ยนจังหวัด -> โหลดอำเภอ */
 pFilter.addEventListener("change",()=>{
   const pObj=provinces.find(x=>x.name_th===pFilter.value);
   dFilter.innerHTML=`<option value="">ทั้งหมด</option>`;
@@ -350,12 +345,12 @@ pFilter.addEventListener("change",()=>{
   if(pObj){
     districts
       .filter(d=>d.province_id===pObj.id)
-      .forEach(d=>dFilter.innerHTML+=`<option>${d.name_th}</option>`);
+      .forEach(d=> dFilter.innerHTML += `<option>${d.name_th}</option>`);
   }
   renderTable();
 });
 
-/* เปลี่ยนอำเภอ */
+/* เปลี่ยนอำเภอ -> โหลดตำบล */
 dFilter.addEventListener("change",()=>{
   const dObj=districts.find(x=>x.name_th===dFilter.value);
   sFilter.innerHTML=`<option value="">ทั้งหมด</option>`;
@@ -363,7 +358,7 @@ dFilter.addEventListener("change",()=>{
   if(dObj){
     subdistricts
       .filter(s=>s.district_id===dObj.id)
-      .forEach(s=>sFilter.innerHTML+=`<option>${s.name_th}</option>`);
+      .forEach(s=> sFilter.innerHTML += `<option>${s.name_th}</option>`);
   }
   renderTable();
 });
@@ -372,7 +367,7 @@ sFilter.addEventListener("change",renderTable);
 tFilter.addEventListener("input",renderTable);
 pcFilter.addEventListener("change",renderTable);
 
-/* Real-time Firestore Listener */
+/* ดึงข้อมูล realtime จาก Firestore */
 let allCases=[];
 onSnapshot(
   query(collection(db,"cases"), where("status","==","open")),
@@ -382,7 +377,7 @@ onSnapshot(
   }
 );
 
-/* Helper แสดงพื้นที่ */
+/* helper แสดงพื้นที่ */
 function showRegion(r){
   if(!r) return "-";
   return [
@@ -393,13 +388,13 @@ function showRegion(r){
   ].filter(Boolean).join(" / ");
 }
 
-/* Helper Badge ระดับน้ำ */
+/* helper badge ระดับน้ำ */
 function levelBadge(lv){
   const color =
     lv==1 ? "#8bc34a" :
     lv==2 ? "#4caf50" :
-    lv==3 ? "#fb8c00" :
-    lv==4 ? "#ef6c00" :
+    lv==3 ? "#ffb300" :
+    lv==4 ? "#fb8c00" :
             "#e53935";
 
   return `<span style="
@@ -407,7 +402,7 @@ function levelBadge(lv){
   ">${lv}</span>`;
 }
 
-/* Render Table */
+/* render ตารางตามฟิลเตอร์ */
 function renderTable(){
   const p  = pFilter.value;
   const d  = dFilter.value;
@@ -416,7 +411,7 @@ function renderTable(){
   const pc = pcFilter.value;
 
   const list = allCases.filter(c=>{
-    const r = c.region || {};
+    const r  = c.region || {};
     const pp = Number(c.people || 0);
 
     if(p && r.province!==p) return false;
@@ -431,35 +426,36 @@ function renderTable(){
     if(pc){
       if(pc==="1-3" && !(pp>=1 && pp<=3)) return false;
       if(pc==="4-6" && !(pp>=4 && pp<=6)) return false;
-      if(pc==="7+"  && !(pp>=7)) return false;
+      if(pc==="7+"  && !(pp>=7))          return false;
     }
 
     return true;
   });
 
   if(!list.length){
-    tbody.innerHTML=`<tr><td colspan="9" class="empty">ไม่พบข้อมูล</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="empty">ไม่พบข้อมูล</td></tr>`;
     return;
   }
 
   tbody.innerHTML = list.map((c,i)=>{
     const lat=c.lat, lng=c.lng;
 
-    const mapsUI = (typeof lat==="number")
-      ? `
+    let mapsUI = "-";
+    if(typeof lat==="number" && typeof lng==="number"){
+      const gUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+      mapsUI = `
         <a class="btn-map"
-           href="javascript:void(0)"
-           onclick="openMapsChoice('google',${lat},${lng})">
+           href="${gUrl}"
+           target="_blank">
            Google Maps
         </a><br>
-
         <a class="btn-map"
            href="javascript:void(0)"
-           onclick="openMapsChoice('mapsme',${lat},${lng})">
+           onclick="openMapsChoice(${lat},${lng})">
            Maps.me
         </a>
-      `
-      : "-";
+      `;
+    }
 
     return `
       <tr>
@@ -468,7 +464,7 @@ function renderTable(){
         <td>${c.phone || '-'}</td>
         <td>${showRegion(c.region)}</td>
         <td>${levelBadge(c.waterLevel)}</td>
-        <td>${c.people}</td>
+        <td>${typeof c.people === "number" ? c.people : "-"}</td>
         <td>${c.note || '-'}</td>
         <td>${mapsUI}</td>
         <td>
@@ -480,25 +476,20 @@ function renderTable(){
   }).join("");
 }
 
-/* เปิดเฉพาะเคสเดียว */
-document.getElementById("openSingle").onclick = ()=>{
-  if(!selectedLatLng || !selectedMapApp) return;
+/* เปิด Maps.me: เคสเดียว */
+const btnSingle = document.getElementById("openSingle");
+btnSingle.onclick = ()=>{
+  if(!selectedLatLng) return;
   const {lat,lng} = selectedLatLng;
-
-  if(selectedMapApp==="google"){
-    const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-    window.open(url,"_blank");
-  } else {
-    const url=`mapsme://map?ll=${lat},${lng}&n=ตำแหน่งผู้ประสบภัย`;
-    window.location.href = url;
-  }
-
+  const url = `mapsme://map?ll=${lat},${lng}&n=ตำแหน่งผู้ประสบภัย`;
+  window.location.href = url;
   closeSelectPopup();
 };
 
-/* เปิดทุกพิกัดในพื้นที่ */
-document.getElementById("openAll").onclick = ()=>{
-  if(!selectedMapApp) return;
+/* เปิด Maps.me: ทุกพิกัดในพื้นที่ตามฟิลเตอร์ */
+const btnAll = document.getElementById("openAll");
+btnAll.onclick = ()=>{
+  if(!allCases.length) return;
 
   const p  = pFilter.value;
   const d  = dFilter.value;
@@ -507,8 +498,8 @@ document.getElementById("openAll").onclick = ()=>{
   const pc = pcFilter.value;
 
   const cases = allCases.filter(c=>{
-    const r=c.region||{};
-    const pp = Number(c.people||0);
+    const r  = c.region || {};
+    const pp = Number(c.people || 0);
 
     if(p && r.province!==p) return false;
     if(d && r.district!==d) return false;
@@ -517,7 +508,7 @@ document.getElementById("openAll").onclick = ()=>{
     if(pc){
       if(pc==="1-3" && !(pp>=1 && pp<=3)) return false;
       if(pc==="4-6" && !(pp>=4 && pp<=6)) return false;
-      if(pc==="7+"  && !(pp>=7)) return false;
+      if(pc==="7+"  && !(pp>=7))          return false;
     }
 
     if(t){
@@ -533,23 +524,12 @@ document.getElementById("openAll").onclick = ()=>{
     return;
   }
 
-  if(selectedMapApp==="google"){
-    /* เปิดหมุดหลายจุด */
-    let url = "https://www.google.com/maps?";
-    cases.forEach(c=>{
-      url += `q=${c.lat},${c.lng}&`;
-    });
-    window.open(url,"_blank");
+  let url = "mapsme://map?";
+  cases.forEach(c=>{
+    url += `ll=${c.lat},${c.lng}&`;
+  });
 
-  } else {
-    /* เปิดหลายพิกัดใน Maps.me */
-    let url="mapsme://map?";
-    cases.forEach(c=>{
-      url+=`ll=${c.lat},${c.lng}&`;
-    });
-    window.location.href=url;
-  }
-
+  window.location.href = url;
   closeSelectPopup();
 };
 
@@ -562,7 +542,6 @@ window.closeCase = async (id)=>{
   });
   alert("บันทึกสำเร็จ");
 };
-
 </script>
 
 </body>
