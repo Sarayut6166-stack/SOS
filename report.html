@@ -65,11 +65,17 @@
       <option value="2">2 - น้ำไหลช้า</option>
       <option value="3">3 - น้ำปานกลาง</option>
       <option value="4">4 - น้ำไหลแรง</option>
-      <option value="5">5 - ไหลแรงมาก อันตรายสูง</option>
+      <option value="5">5 - น้ำไหลมาก อันตรายสูง</option>
     </select>
 
     <label>จำนวนคนที่ต้องการอพยพ</label>
-    <input type="number" name="people" min="1" placeholder="จำนวนคน เช่น 3" required>
+    <input
+      type="number"
+      name="people"
+      min="0"
+      placeholder="จำนวนคน เช่น 0, 3, 5"
+      required
+    >
 
     <label>รายละเอียดเพิ่มเติม</label>
     <textarea name="note" rows="3" placeholder="เช่น มีผู้ป่วยติดเตียง ฯลฯ"></textarea>
@@ -93,7 +99,7 @@
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
 
-  // --- อ้างอิง element ให้ชัดเจน (แก้บั๊กส่งไม่ได้) ---
+  // DOM elements
   const form       = document.getElementById('reportForm');
   const statusEl   = document.getElementById('status');
   const provinceEl = document.getElementById('province');
@@ -187,7 +193,7 @@
       const data = {
         name   : form.name.value.trim(),
         phone  : phone,
-        people : Number(form.people.value),
+        people : Number(form.people.value),      // รองรับ 0,1,2,...
         note   : form.note.value.trim(),
         lat    : latlng.lat,
         lng    : latlng.lng,
