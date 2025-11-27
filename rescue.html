@@ -44,6 +44,21 @@
       min-width: 150px;
     }
 
+    label {
+      font-size: 13px;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 7px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -101,7 +116,7 @@
       color: #777;
     }
 
-    /* Popup Maps.me */
+    /* Popup เลือกโหมด Maps.me */
     #selectMapsPopup {
       display:none;
       position:fixed;
@@ -110,7 +125,6 @@
       z-index:99999;
       backdrop-filter:blur(2px);
     }
-
     #selectMapsBox {
       background:#fff;
       width:80%;
@@ -120,7 +134,6 @@
       border-radius:12px;
       text-align:center;
     }
-
     .popup-btn{
       padding:10px;
       background:#2e7d32;
@@ -132,45 +145,82 @@
       text-align:center;
       cursor:pointer;
     }
+    .popup-close { background:#888 !important; }
 
-    .popup-close {
-      background:#888 !important;
+    /* Popup แนะนำ Maps.me ตอนเปิดหน้า */
+    #mapsmeInfoPopup {
+      display:none;
+      position:fixed;
+      left:0; top:0; right:0; bottom:0;
+      background:rgba(0,0,0,0.60);
+      z-index:99998;
+      backdrop-filter:blur(2px);
+    }
+    #mapsmeInfoBox {
+      background:#fff;
+      width:86%;
+      max-width:380px;
+      margin:120px auto;
+      padding:16px;
+      border-radius:12px;
+      text-align:left;
+      box-shadow:0 4px 15px rgba(0,0,0,0.25);
+      font-size:15px;
+      line-height:1.5;
+    }
+    #mapsmeInfoBox h3 {
+      margin-top:0;
+      margin-bottom:6px;
+    }
+    #mapsmeInfoBox a {
+      color:#0d6efd;
+      font-weight:bold;
+      text-decoration:none;
+    }
+    #mapsmeInfoBox a:hover {
+      text-decoration:underline;
+    }
+    .btn-info-close {
+      margin-top:10px;
+      width:100%;
+      padding:8px;
+      border-radius:8px;
+      border:none;
+      background:#2e7d32;
+      color:#fff;
+      font-size:14px;
+      cursor:pointer;
     }
   </style>
 </head>
 
 <body>
 
-<!-- 🔰 คำแนะนำ Maps.me -->
-<div style="
-  background:#fff3cd;
-  color:#856404;
-  padding:14px;
-  border-left:6px solid #ffca2c;
-  font-size:15px;
-  margin:10px;
-  border-radius:8px;
-  line-height:1.5;
-">
-  📌 <b>คำแนะนำสำหรับเจ้าหน้าที่กู้ภัย</b><br>
-  หากพื้นที่เกิดเหตุ <b>ไม่มีสัญญาณอินเทอร์เน็ต</b>  
-  และต้องการใช้งาน <b>แผนที่แบบนำทางออฟไลน์</b>  
-  <span style="color:#d35400; font-weight:bold;">แนะนำให้ใช้แอพ Maps.me</span>
-
-  <div style="margin-top:8px;">
-    👉 <a href="https://apps.apple.com/us/app/maps-me-offline-maps-gps-nav/id510623322" target="_blank" style="color:#0d6efd; font-weight:bold;">
-       ดาวน์โหลด Maps.me (iPhone / iPad)
-    </a>
-  </div>
-
-  <div>
-    👉 <a href="https://play.google.com/store/apps/details?id=com.mapswithme.maps.pro" target="_blank" style="color:#0d6efd; font-weight:bold;">
-       ดาวน์โหลด Maps.me (Android)
-    </a>
+<!-- 🔰 Popup แนะนำ Maps.me แสดงเมื่อเปิดหน้าระบบ -->
+<div id="mapsmeInfoPopup">
+  <div id="mapsmeInfoBox">
+    <h3>📌 คำแนะนำสำหรับเจ้าหน้าที่กู้ภัย</h3>
+    <p>
+      หากพื้นที่เกิดเหตุ <b>ไม่มีสัญญาณอินเทอร์เน็ต</b>  
+      และต้องการใช้งาน <b>แผนที่แบบนำทางออฟไลน์</b><br>
+      <span style="color:#d35400;font-weight:bold;">แนะนำให้ใช้แอพ Maps.me</span>  
+      เพื่อเปิดพิกัดและนำทางไปยังผู้ประสบภัยได้แม้ไม่มีเน็ต
+    </p>
+    <p style="margin-top:8px;">
+      👉 <a href="https://apps.apple.com/us/app/maps-me-offline-maps-gps-nav/id510623322"
+           target="_blank">
+        ดาวน์โหลด Maps.me (iPhone / iPad)
+      </a><br>
+      👉 <a href="https://play.google.com/store/apps/details?id=com.mapswithme.maps.pro"
+           target="_blank">
+        ดาวน์โหลด Maps.me (Android)
+      </a>
+    </p>
+    <button class="btn-info-close" onclick="closeMapsmeInfo()">เข้าใจแล้ว</button>
   </div>
 </div>
 
-<!-- Popup Maps.me -->
+<!-- Popup เลือกโหมด Maps.me -->
 <div id="selectMapsPopup">
   <div id="selectMapsBox">
     <h3>ต้องการเปิด Maps.me แบบใด?</h3>
@@ -181,13 +231,26 @@
 </div>
 
 <script>
-window.openMapsChoice = (lat,lng)=>{
-  selectedLatLng = {lat,lng};
-  document.getElementById("selectMapsPopup").style.display="block";
-};
-window.closeSelectPopup = ()=>{
-  document.getElementById("selectMapsPopup").style.display="none";
-};
+  // ตัวแปรเก็บตำแหน่งเคสที่เลือกใช้กับ Maps.me
+  window.selectedLatLng = null;
+
+  // เปิด popup เลือกโหมด Maps.me
+  window.openMapsChoice = (lat,lng)=>{
+    window.selectedLatLng = {lat,lng};
+    document.getElementById("selectMapsPopup").style.display="block";
+  };
+
+  window.closeSelectPopup = ()=>{
+    document.getElementById("selectMapsPopup").style.display="none";
+  };
+
+  // Popup แนะนำ Maps.me แสดงเมื่อเปิดหน้านี้
+  function closeMapsmeInfo(){
+    document.getElementById("mapsmeInfoPopup").style.display="none";
+  }
+  window.addEventListener("load", ()=>{
+    document.getElementById("mapsmeInfoPopup").style.display = "block";
+  });
 </script>
 
 <div class="header">
@@ -431,19 +494,23 @@ function renderTable(){
 }
 
 /* Maps.me action */
-let selectedLatLng=null;
+const btnSingle = document.getElementById("openSingle");
+const btnAll    = document.getElementById("openAll");
 
-document.getElementById("openSingle").onclick = ()=>{
-  const {lat,lng}=selectedLatLng;
+btnSingle.onclick = ()=>{
+  const loc = window.selectedLatLng;
+  if(!loc) return;
+  const {lat,lng} = loc;
   window.location.href = `mapsme://map?ll=${lat},${lng}&n=ตำแหน่งผู้ประสบภัย`;
   closeSelectPopup();
 };
 
-document.getElementById("openAll").onclick = ()=>{
-
-  const p=pFilter.value, d=dFilter.value, s=sFilter.value;
-  const t=tFilter.value.trim().toLowerCase();
-  const pc=pcFilter.value;
+btnAll.onclick = ()=>{
+  const p  = pFilter.value;
+  const d  = dFilter.value;
+  const s  = sFilter.value;
+  const t  = tFilter.value.trim().toLowerCase();
+  const pc = pcFilter.value;
 
   const cases = allCases.filter(c=>{
     const r=c.region||{};
@@ -464,7 +531,7 @@ document.getElementById("openAll").onclick = ()=>{
       if(!text.includes(t)) return false;
     }
 
-    return typeof c.lat==="number";
+    return typeof c.lat==="number" && typeof c.lng==="number";
   });
 
   if(!cases.length){
