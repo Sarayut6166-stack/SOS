@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>แจ้งเหตุผู้ประสบภัยน้ำท่วม</title>
+  <title>แจ้งเหตุผู้ประสบภัยน้ำท่วม | SOS Rescue</title>
 
   <!-- Leaflet map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -16,6 +16,7 @@
     input, textarea, select {
       width: 100%; padding: 8px; margin-top:4px;
       border-radius:8px; border:1px solid #ccc; font-size:15px;
+      box-sizing:border-box;
     }
     button {
       width:100%; margin-top:14px; padding:10px;
@@ -37,7 +38,7 @@
     <input name="name" required>
 
     <label>เบอร์โทรติดต่อ</label>
-    <input name="phone" required>
+    <input name="phone" type="tel" required>
 
     <label>จังหวัด</label>
     <select id="province" name="province" required>
@@ -83,109 +84,134 @@
 <script src="firebase-config.js"></script>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getFirestore, collection, query, where,
-  getDocs, addDoc, doc, deleteDoc, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, query, where,
+    getDocs, addDoc, doc, deleteDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
 
-/* ----------------- โหลดจังหวัด/อำเภอ/ตำบล ----------------- */
-const URL_P = "https://raw.githubusercontent.com/kongvut/thai-province-data/master/api/latest/province.json";
-const URL_D = "https://raw.githubusercontent.com/kongvut/thai-province-data/master/api/latest/district.json";
-const URL_S = "https://raw.githubusercontent.com/kongvut/thai-province-data/master/api/latest/sub_district.json";
+  // --- อ้างอิง element ให้ชัดเจน (แก้บั๊กส่งไม่ได้) ---
+  const form       = document.getElementById('reportForm');
+  const statusEl   = document.getElementById('status');
+  const provinceEl = document.getElementById('province');
+  const districtEl = document.getElementById('district');
+  const subdistEl  = document.getElementById('subdistrict');
 
-let provinces=[],districts=[],subdistricts=[];
+  /* ----------------- โหลดจังหวัด/อำเภอ/ตำบล ----------------- */
+  const URL_P = "https://raw.githubusercontent.com/kongvut/thai-province-data/master/api/latest/province.json";
+  const URL_D = "https://raw.githubusercontent.com/kongvut/thai-province-data/master/api/latest/district.json";
+  const URL_S = "https://raw.githubusercontent.com/kongvut/thai-province-data/master/api/latest/sub_district.json";
 
-async function loadThai() {
-  provinces    = await (await fetch(URL_P)).json();
-  districts    = await (await fetch(URL_D)).json();
-  subdistricts = await (await fetch(URL_S)).json();
+  let provinces=[], districts=[], subdistricts=[];
 
-  provinces.forEach(p => {
-    province.innerHTML += `<option>${p.name_th}</option>`;
-  });
-}
-loadThai();
+  async function loadThai() {
+    provinces    = await (await fetch(URL_P)).json();
+    districts    = await (await fetch(URL_D)).json();
+    subdistricts = await (await fetch(URL_S)).json();
 
-province.addEventListener("change",()=>{
-  const p = provinces.find(x => x.name_th === province.value);
-  district.innerHTML = `<option value="">เลือกอำเภอ</option>`;
-  subdistrict.innerHTML = `<option value="">เลือกตำบล</option>`;
-
-  if(!p) return;
-  districts.filter(d=>d.province_id===p.id)
-           .forEach(d=> district.innerHTML += `<option>${d.name_th}</option>`);
-});
-
-district.addEventListener("change",()=>{
-  const d = districts.find(x => x.name_th === district.value);
-  subdistrict.innerHTML = `<option value="">เลือกตำบล</option>`;
-
-  if(!d) return;
-  subdistricts.filter(s=>s.district_id===d.id)
-              .forEach(s=> subdistrict.innerHTML += `<option>${s.name_th}</option>`);
-});
-
-/* ----------------- แผนที่ ----------------- */
-const map = L.map("map").setView([13,100], 6);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-let marker = L.marker([13,100],{draggable:true}).addTo(map);
-
-if(navigator.geolocation){
-  navigator.geolocation.getCurrentPosition(pos=>{
-    const lat=pos.coords.latitude, lng=pos.coords.longitude;
-    marker.setLatLng([lat,lng]);
-    map.setView([lat,lng],15);
-  });
-}
-
-map.on("click",e=> marker.setLatLng(e.latlng));
-
-/* ----------------- ป้องกันเบอร์ซ้ำ ----------------- */
-async function deleteOldCase(phone){
-  const q = query(collection(db,"cases"), where("phone","==",phone));
-  const snap = await getDocs(q);
-  snap.forEach(async d => await deleteDoc(doc(db,"cases",d.id)));
-}
-
-/* ----------------- ส่งข้อมูล ----------------- */
-reportForm.addEventListener("submit", async e=>{
-  e.preventDefault();
-  status.textContent = "กำลังส่งข้อมูล...";
-
-  const latlng = marker.getLatLng();
-
-  await deleteOldCase(reportForm.phone.value);
-
-  const data = {
-    name   : reportForm.name.value,
-    phone  : reportForm.phone.value,
-    people : Number(reportForm.people.value),
-    note   : reportForm.note.value,
-    lat    : latlng.lat,
-    lng    : latlng.lng,
-    region : {
-      province   : province.value,
-      district   : district.value,
-      subdistrict: subdistrict.value,
-      village    : reportForm.village.value
-    },
-    waterLevel: Number(reportForm.waterLevel.value),
-    status: "open",
-    createdAt: serverTimestamp()
-  };
-
-  try {
-    await addDoc(collection(db,"cases"), data);
-    status.textContent = "✔ ส่งข้อมูลสำเร็จ";
-    reportForm.reset();
-  } catch (err) {
-    status.textContent = "❌ ส่งข้อมูลล้มเหลว";
+    provinceEl.innerHTML = '<option value="">เลือกจังหวัด</option>';
+    provinces.forEach(p => {
+      provinceEl.innerHTML += `<option>${p.name_th}</option>`;
+    });
   }
-});
+  loadThai();
+
+  provinceEl.addEventListener("change", () => {
+    const p = provinces.find(x => x.name_th === provinceEl.value);
+    districtEl.innerHTML   = '<option value="">เลือกอำเภอ</option>';
+    subdistEl.innerHTML    = '<option value="">เลือกตำบล</option>';
+
+    if (!p) return;
+    districts
+      .filter(d => d.province_id === p.id)
+      .forEach(d => {
+        districtEl.innerHTML += `<option>${d.name_th}</option>`;
+      });
+  });
+
+  districtEl.addEventListener("change", () => {
+    const d = districts.find(x => x.name_th === districtEl.value);
+    subdistEl.innerHTML = '<option value="">เลือกตำบล</option>';
+
+    if (!d) return;
+    subdistricts
+      .filter(s => s.district_id === d.id)
+      .forEach(s => {
+        subdistEl.innerHTML += `<option>${s.name_th}</option>`;
+      });
+  });
+
+  /* ----------------- แผนที่ ----------------- */
+  const map = L.map("map").setView([13,100], 6);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19
+  }).addTo(map);
+
+  let marker = L.marker([13,100], { draggable:true }).addTo(map);
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      marker.setLatLng([lat, lng]);
+      map.setView([lat, lng], 15);
+    });
+  }
+
+  map.on("click", e => marker.setLatLng(e.latlng));
+
+  /* ----------------- ป้องกันเบอร์ซ้ำ ----------------- */
+  async function deleteOldCase(phone){
+    const q = query(collection(db,"cases"), where("phone","==",phone));
+    const snap = await getDocs(q);
+    for (const d of snap.docs) {
+      await deleteDoc(doc(db,"cases", d.id));
+    }
+  }
+
+  /* ----------------- ส่งข้อมูล ----------------- */
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    statusEl.textContent = "กำลังส่งข้อมูล...";
+
+    const latlng = marker.getLatLng();
+    const phone  = form.phone.value.trim();
+
+    try {
+      // ลบเคสเก่าที่ใช้เบอร์เดียวกันออกก่อน
+      await deleteOldCase(phone);
+
+      const data = {
+        name   : form.name.value.trim(),
+        phone  : phone,
+        people : Number(form.people.value),
+        note   : form.note.value.trim(),
+        lat    : latlng.lat,
+        lng    : latlng.lng,
+        region : {
+          province   : provinceEl.value,
+          district   : districtEl.value,
+          subdistrict: subdistEl.value,
+          village    : form.village.value.trim()
+        },
+        waterLevel: Number(form.waterLevel.value),
+        status    : "open",
+        createdAt : serverTimestamp()
+      };
+
+      await addDoc(collection(db,"cases"), data);
+      statusEl.textContent = "✔ ส่งข้อมูลสำเร็จ";
+      alert("ส่งข้อมูลสำเร็จ ขอบคุณที่แจ้งข้อมูลให้หน่วยกู้ภัยครับ");
+      form.reset();
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "❌ ส่งข้อมูลล้มเหลว กรุณาลองใหม่อีกครั้ง";
+      alert("เกิดข้อผิดพลาด ไม่สามารถส่งข้อมูลได้");
+    }
+  });
 </script>
 
 </body>
