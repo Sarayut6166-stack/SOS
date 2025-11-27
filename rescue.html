@@ -115,7 +115,8 @@
       color: #777;
     }
 
-    /* Popup Maps.me */
+
+    /* Popup แนะนำ Maps.me */
     #mapsmePopup {
       display: none;
       position: fixed;
@@ -135,19 +136,40 @@
       text-align: center;
     }
 
-    .popup-btn {
-      display: block;
-      margin-top: 10px;
-      padding: 10px;
-      background: #2e7d32;
-      border-radius: 8px;
-      color: white;
-      text-decoration: none;
+
+    /* Popup เลือก Maps.me โหมด */
+    #selectMapsPopup{
+      display:none;
+      position:fixed;
+      left:0;top:0;right:0;bottom:0;
+      background:rgba(0,0,0,.6);
+      z-index:99999;
+      backdrop-filter:blur(2px);
     }
 
-    .popup-close {
-      background: #888;
+    #selectMapsBox{
+      background:#fff;
+      width:80%;
+      max-width:360px;
+      margin:120px auto;
+      padding:16px;
+      border-radius:12px;
+      text-align:center;
     }
+
+    .popup-btn{
+      display:block;
+      padding:10px;
+      background:#2e7d32;
+      margin-top:10px;
+      border-radius:8px;
+      text-decoration:none;
+      font-size:14px;
+      color:white;
+      text-align:center;
+      cursor:pointer;
+    }
+    .popup-close { background:#888 !important; }
   </style>
 </head>
 
@@ -157,30 +179,43 @@
 <div id="mapsmePopup">
   <div id="mapsmeBox">
     <h3>📌 แนะนำสำหรับ iPhone/iPad</h3>
-    <p>เพื่อใช้งานแผนที่ในพื้นที่ไม่มีอินเทอร์เน็ต แนะนำให้ติดตั้งแอป <b>Maps.me</b></p>
+    <p>เพื่อใช้งานแผนที่ในพื้นที่ไม่มีอินเทอร์เน็ต  
+    แนะนำให้ติดตั้งแอป <b>Maps.me</b></p>
+
     <a class="popup-btn"
        href="https://apps.apple.com/us/app/maps-me-offline-maps-gps-nav/id510623322"
        target="_blank">📥 ดาวน์โหลด Maps.me</a>
-    <a class="popup-btn popup-close" onclick="closePopup()">ปิด</a>
+
+    <a class="popup-btn popup-close" onclick="closeIOSPopup()">ปิด</a>
+  </div>
+</div>
+
+<!-- Popup เลือกโหมด Maps.me -->
+<div id="selectMapsPopup">
+  <div id="selectMapsBox">
+    <h3>ต้องการเปิด Maps.me แบบใด?</h3>
+    <div id="openSingle" class="popup-btn">📍 เคสนี้เท่านั้น</div>
+    <div id="openAll" class="popup-btn">📍📍 ทุกพิกัดในพื้นที่</div>
+    <div class="popup-btn popup-close" onclick="closeSelectPopup()">ยกเลิก</div>
   </div>
 </div>
 
 <script>
-  function isIOS() {
-    return /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  }
+function isIOS(){
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
 
-  function closePopup() {
-    document.getElementById("mapsmePopup").style.display = "none";
-    localStorage.setItem("mapsPopupSeen", Date.now() + 86400000);
-  }
+function closeIOSPopup(){
+  document.getElementById("mapsmePopup").style.display="none";
+  localStorage.setItem("mapsInfoSeen", Date.now()+86400000);
+}
 
-  window.addEventListener("load", () => {
-    if (!isIOS()) return;
-    const seen = localStorage.getItem("mapsPopupSeen");
-    if (seen && Number(seen) > Date.now()) return;
-    document.getElementById("mapsmePopup").style.display = "block";
-  });
+window.addEventListener("load",()=>{
+  if(!isIOS()) return;
+  const seen=localStorage.getItem("mapsInfoSeen");
+  if(seen && Number(seen)>Date.now()) return;
+  document.getElementById("mapsmePopup").style.display="block";
+});
 </script>
 
 
@@ -247,7 +282,9 @@
         <th>สถานะ</th>
       </tr>
     </thead>
-    <tbody id="caseBody"></tbody>
+    <tbody id="caseBody">
+      <tr><td colspan="9" class="empty">กำลังโหลด...</td></tr>
+    </tbody>
   </table>
 
 </div>
@@ -264,14 +301,13 @@ import {
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
-const tbody = document.getElementById("caseBody");
-
+/* โหลดฐานข้อมูลจังหวัดประเทศไทย */
 let provinces=[],districts=[],subdistricts=[];
-const URL_P = "https://raw.githubusercontent.com/kongvut/thai-province-data/master/api/latest/province.json";
-const URL_D = "https://raw.githubusercontent.com/kongvut/thai-province-data/master/api/latest/district.json";
-const URL_S = "https://raw.githubusercontent.com/kongvut/thai-province-data/master/api/latest/sub_district.json";
+const URL_P="https://raw.githubusercontent.com/kongvut/thai-province-data/master/api/latest/province.json";
+const URL_D="https://raw.githubusercontent.com/kongvut/thai-province-data/master/api/latest/district.json";
+const URL_S="https://raw.githubusercontent.com/kongvut/thai-province-data/master/api/latest/sub_district.json";
 
-async function loadThai() {
+async function loadThai(){
   provinces    = await (await fetch(URL_P)).json();
   districts    = await (await fetch(URL_D)).json();
   subdistricts = await (await fetch(URL_S)).json();
@@ -280,32 +316,43 @@ async function loadThai() {
     filterProvince.innerHTML += `<option>${p.name_th}</option>`;
   });
 }
-
 loadThai();
 
-/* ตัวกรองเปลี่ยน */
+/* ใช้สำหรับ popup Maps.me */
+let selectedLatLng = null;
+
+window.openMapsChoice = (lat,lng)=>{
+  selectedLatLng={lat,lng};
+  document.getElementById("selectMapsPopup").style.display="block";
+}
+
+window.closeSelectPopup = ()=>{
+  document.getElementById("selectMapsPopup").style.display="none";
+}
+
+
+/* กรองอำเภอ */
 filterProvince.addEventListener("change",()=>{
-  const pObj = provinces.find(x=>x.name_th===filterProvince.value);
-  filterDistrict.innerHTML = `<option value="">ทั้งหมด</option>`;
-  filterSubdistrict.innerHTML = `<option value="">ทั้งหมด</option>`;
+  const pObj=provinces.find(x=>x.name_th===filterProvince.value);
+  filterDistrict.innerHTML=`<option value="">ทั้งหมด</option>`;
+  filterSubdistrict.innerHTML=`<option value="">ทั้งหมด</option>`;
 
   if(pObj){
     districts.filter(d=>d.province_id===pObj.id)
              .forEach(d=>filterDistrict.innerHTML+=`<option>${d.name_th}</option>`);
   }
-
   renderTable();
 });
 
+/* กรองตำบล */
 filterDistrict.addEventListener("change",()=>{
-  const dObj = districts.find(x=>x.name_th===filterDistrict.value);
-  filterSubdistrict.innerHTML = `<option value="">ทั้งหมด</option>`;
+  const dObj=districts.find(x=>x.name_th===filterDistrict.value);
+  filterSubdistrict.innerHTML=`<option value="">ทั้งหมด</option>`;
 
   if(dObj){
     subdistricts.filter(s=>s.district_id===dObj.id)
                 .forEach(s=>filterSubdistrict.innerHTML+=`<option>${s.name_th}</option>`);
   }
-
   renderTable();
 });
 
@@ -313,17 +360,18 @@ filterSubdistrict.addEventListener("change",renderTable);
 filterText.addEventListener("input",renderTable);
 filterPeople.addEventListener("change",renderTable);
 
-let allCases = [];
-
-/* ดึงข้อมูลจาก Firebase realtime */
+/* ดึงข้อมูลแบบ realtime */
+let allCases=[];
 onSnapshot(
   query(collection(db,"cases"), where("status","==","open")),
-  snap => {
-    allCases = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  snap=>{
+    allCases=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderTable();
   }
 );
 
+
+/* แปลงชื่อพื้นที่ */
 function showRegion(r){
   return [
     r.village,
@@ -333,20 +381,19 @@ function showRegion(r){
   ].filter(Boolean).join(" / ");
 }
 
+/* สีระดับน้ำ */
 function levelBadge(lv){
-  return `<span style="color:white;padding:3px 6px;border-radius:8px;background:
-    ${lv==1?'#8bc34a':
-      lv==2?'#4caf50':
-      lv==3?'#fb8c00':
-      lv==4?'#ef6c00':
-             '#e53935'}">ระดับ ${lv}</span>`;
+  return `<span style="color:white;padding:3px 6px;border-radius:8px;
+  background:${lv==1?'#8bc34a':lv==2?'#4caf50':lv==3?'#fb8c00':lv==4?'#ef6c00':'#e53935'};">
+  ระดับ ${lv}</span>`;
 }
 
+/* เรนเดอร์ตาราง */
 function renderTable(){
-  const p = filterProvince.value;
-  const d = filterDistrict.value;
-  const s = filterSubdistrict.value;
-  const t = filterText.value.trim().toLowerCase();
+  const p  = filterProvince.value;
+  const d  = filterDistrict.value;
+  const s  = filterSubdistrict.value;
+  const t  = filterText.value.trim().toLowerCase();
   const pc = filterPeople.value;
 
   const list = allCases.filter(c=>{
@@ -357,34 +404,36 @@ function renderTable(){
     if(s && r.subdistrict!==s) return false;
 
     if(t){
-      if(!(`${c.name} ${c.phone}`.toLowerCase().includes(t))) return false;
+      const txt=`${c.name} ${c.phone}`.toLowerCase();
+      if(!txt.includes(t)) return false;
     }
 
     if(pc){
-      const people = Number(c.people || 0);
-      if(pc==="1-3" && !(people>=1 && people<=3)) return false;
-      if(pc==="4-6" && !(people>=4 && people<=6)) return false;
-      if(pc==="7+"  && !(people>=7)) return false;
+      const pp = Number(c.people || 0);
+      if(pc==="1-3" && !(pp>=1 && pp<=3)) return false;
+      if(pc==="4-6" && !(pp>=4 && pp<=6)) return false;
+      if(pc==="7+"  && !(pp>=7)) return false;
     }
 
     return true;
   });
 
   if(!list.length){
-    tbody.innerHTML = `<tr><td colspan="9" class="empty">ไม่พบข้อมูล</td></tr>`;
+    caseBody.innerHTML=`<tr><td colspan="9" class="empty">ไม่พบข้อมูลในพื้นที่ที่เลือก</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = list.map((c,i)=>{
+  caseBody.innerHTML = list.map((c,i)=>{
     const lat=c.lat, lng=c.lng;
-
     let maps = "-";
+
     if(typeof lat==="number"){
       const g = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-      const m = `mapsme://map?ll=${lat},${lng}`;
       maps = `
-        <a class="btn-map" href="${g}" target="_blank">Google Maps</a><br>
-        <a class="btn-map" href="${m}">Maps.me</a>
+        <a class="btn-map" href="${g}" target="_blank">Google Maps</a>
+        <br>
+        <a class="btn-map" href="javascript:void(0)"
+           onclick="openMapsChoice(${lat},${lng})">Maps.me</a>
       `;
     }
 
@@ -395,17 +444,75 @@ function renderTable(){
         <td>${c.phone}</td>
         <td>${showRegion(c.region)}</td>
         <td>${levelBadge(c.waterLevel)}</td>
-        <td>${c.people || '-'}</td>
+        <td>${c.people}</td>
         <td>${c.note || '-'}</td>
         <td>${maps}</td>
-        <td><span class="status-tag">รอช่วยเหลือ</span><br>
-            <button class="btn-finish" onclick="closeCase('${c.id}')">ช่วยแล้ว</button></td>
+        <td>
+          <span class="status-tag">รอช่วยเหลือ</span><br>
+          <button class="btn-finish" onclick="closeCase('${c.id}')">ช่วยแล้ว</button>
+        </td>
       </tr>
     `;
   }).join("");
 }
 
-window.closeCase = async function(id){
+
+/* เปิด Maps.me: เปิดเฉพาะเคสเดียว */
+document.getElementById("openSingle").onclick = ()=>{
+  if(!selectedLatLng) return;
+  const {lat,lng}=selectedLatLng;
+  window.location.href=`mapsme://map?ll=${lat},${lng}`;
+  closeSelectPopup();
+};
+
+
+/* เปิด Maps.me: เปิดทุกพิกัดในพื้นที่ที่ฟิลเตอร์อยู่ */
+document.getElementById("openAll").onclick = ()=>{
+  const p  = filterProvince.value;
+  const d  = filterDistrict.value;
+  const s  = filterSubdistrict.value;
+  const t  = filterText.value.trim().toLowerCase();
+  const pc = filterPeople.value;
+
+  const cases = allCases.filter(c=>{
+    const r=c.region||{};
+    const pp=Number(c.people||0);
+
+    if(p && r.province!==p) return false;
+    if(d && r.district!==d) return false;
+    if(s && r.subdistrict!==s) return false;
+
+    if(pc){
+      if(pc==="1-3" && !(pp>=1 && pp<=3)) return false;
+      if(pc==="4-6" && !(pp>=4 && pp<=6)) return false;
+      if(pc==="7+"  && !(pp>=7)) return false;
+    }
+
+    if(t){
+      const txt=`${c.name} ${c.phone}`.toLowerCase();
+      if(!txt.includes(t)) return false;
+    }
+
+    return true;
+  });
+
+  if(cases.length===0){
+    alert("ไม่พบพิกัดในพื้นที่นี้");
+    return;
+  }
+
+  let url="mapsme://map?";
+  cases.forEach(c=>{
+    if(c.lat) url+=`ll=${c.lat},${c.lng}&`;
+  });
+
+  window.location.href=url;
+  closeSelectPopup();
+};
+
+
+/* ปิดเคส */
+window.closeCase = async (id)=>{
   if(!confirm("ยืนยันว่าช่วยเคสนี้แล้ว?")) return;
   await updateDoc(doc(db,"cases",id),{
     status:"closed",
